@@ -195,7 +195,9 @@ if [ -n "$_notes" ]; then
                     # Strip inline comments (e.g. VALUE   # comment → VALUE)
                     _val="${_line#*=}"
                     _val=$(echo "$_val" | sed 's/[[:space:]][[:space:]]*#.*$//' | sed 's/[[:space:]]*$//')
-                    printf '%s=%s\n' "$_key" "$_val" >> "$BOOTSTRAP_ENV"
+                    # Single-quote values to prevent shell special chars (&, ^, !) from being interpreted
+                    _val_escaped=$(printf '%s' "$_val" | sed "s/'/'\\\\''/g")
+                    printf "%s='%s'\n" "$_key" "$_val_escaped" >> "$BOOTSTRAP_ENV"
                 fi
                 ;;
         esac
