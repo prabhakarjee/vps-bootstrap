@@ -122,6 +122,8 @@ if [ -z "${BW_CLIENTID:-}" ] || [ -z "${BW_CLIENTSECRET:-}" ]; then
 fi
 
 echo "🔐 Authenticating to Bitwarden..."
+# Logout first in case a previous run left the CLI in a logged-in state
+bw logout 2>/dev/null || true
 BW_CLIENTID="$BW_CLIENTID" BW_CLIENTSECRET="$BW_CLIENTSECRET" bw login --apikey --quiet 2>/dev/null || {
     echo "❌ Bitwarden API login failed. Check credentials in $BW_ENV"
     exit 1
