@@ -19,7 +19,7 @@ Use a **Dedicated Deploy Bot** account (e.g. `myorg-deploy`) and one **Fine-Grai
 
 ## Bitwarden: login once, fetch, logout
 
-The script uses Bitwarden only for this run: you provide the API key when prompted; the script fetches credentials and stores bootstrap.env; after Phase 1 it runs `bw lock` and removes `bw.env`. For **Phase 2 no-prompt** (fetch-secrets, add-app, etc.), create `/opt/secrets/bw.env` on the VPS before running Phase 2 (see infra-core OPERATIONS.md § No-prompt operation).
+The script uses Bitwarden only for this run: you provide the API key when prompted; the script fetches credentials and stores bootstrap.env; after Phase 1 it runs `bw logout` and removes `bw.env`. For **Phase 2 no-prompt** (fetch-secrets, add-app, etc.), create `/opt/secrets/bw.env` on the VPS before running Phase 2 (see infra-core OPERATIONS.md § No-prompt operation).
 
 ## Prerequisites
 
