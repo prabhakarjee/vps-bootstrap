@@ -127,6 +127,25 @@ BW_CLIENTID="$BW_CLIENTID" BW_CLIENTSECRET="$BW_CLIENTSECRET" bw login --apikey 
     exit 1
 }
 echo "   ✓ Bitwarden authenticated"
+
+_status=$(bw status 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4 2>/dev/null || echo "unauthenticated")
+if [ "$_status" = "locked" ]; then
+    echo ""
+    echo "   🔐 Bitwarden vault locked. Enter master password to unlock:"
+    set +x
+    BW_SESSION=$(bw unlock --raw 2>/dev/null </dev/tty) || {
+        echo "❌ Bitwarden unlock failed."
+        exit 1
+    }
+    export BW_SESSION
+    [[ $- == *x* ]] && set -x
+    echo "   ✓ Bitwarden unlocked for this session"
+elif [ "$_status" = "unlocked" ]; then
+    echo "   ✓ Bitwarden already unlocked"
+else
+    echo "❌ Bitwarden status check failed: $_status"
+    exit 1
+fi
 echo ""
 
 # ─── Fetch GitHub PAT and GITHUB_ORG from Bitwarden ─────────────────────────
@@ -159,7 +178,7 @@ echo "   ✓ GitHub org: $GITHUB_ORG"
 
 # Store only allowed bootstrap config (never tenant DB, Supabase, billing, etc.)
 BOOTSTRAP_ENV="$SECRETS_DIR/bootstrap.env"
-BOOTSTRAP_ALLOWED_KEYS="GITHUB_ORG GITHUB_REPO_NAME DEPLOY_USER_PASSWORD VPS_HOSTNAME PRIMARY_DOMAIN MONITOR_SUBDOMAIN TZ BACKUP_CRON_TIME MAINT_CRON_TIME FETCH_SECRETS PHASE2_MODE BASIC_AUTH_USER BASIC_AUTH_PASS BASIC_AUTH_HASH PROVISION_KUMA RUN_BACKUP_CONFIG ADD_APPS DEPLOY_APPS"
+BOOTSTRAP_ALLOWED_KEYS="GITHUB_ORG GITHUB_REPO_NAME DEPLOY_USER_PASSWORD VPS_HOSTNAME PRIMARY_DOMAIN MONITOR_SUBDOMAIN TZ BACKUP_CRON_TIME MAINT_CRON_TIME FETCH_SECRETS PHASE2_MODE PROVISION_KUMA RUN_BACKUP_CONFIG ADD_APPS DEPLOY_APPS"
 _notes=""
 _notes=$(bw get notes "Infra Bootstrap Env" 2>/dev/null) || true
 if [ -n "$_notes" ]; then
