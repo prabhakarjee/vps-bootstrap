@@ -275,6 +275,19 @@ echo ""
 _phase1_exit=0
 bash "$INSTALL_DIR/scripts/bootstrap-phase1.sh" || _phase1_exit=$?
 
+# ─── Run Phase 2 automatically (Bitwarden still active) ─────────────────────
+_phase2_exit=0
+if [ "$_phase1_exit" -eq 0 ]; then
+    echo ""
+    echo "🔧 Running Phase 2 (Caddy, secrets, apps, cron)..."
+    echo ""
+    # Pass BW credentials to Phase 2 so it doesn't re-prompt
+    export BW_SESSION BW_CLIENTID BW_CLIENTSECRET
+    export BITWARDEN_CLEANUP_SKIP=1  # Phase 2 should not logout; we do it below
+    bash "$INSTALL_DIR/scripts/bootstrap-phase2.sh" || _phase2_exit=$?
+    unset BITWARDEN_CLEANUP_SKIP
+fi
+
 # ─── Full Bitwarden logout and remove API key from disk ──────────────────────
 echo ""
 echo "🔒 Logging out of Bitwarden and removing API key from disk..."
@@ -286,11 +299,22 @@ history -c 2>/dev/null || true
 rm -f "$BW_ENV"
 echo "   ✓ Bitwarden logged out (session cleared); $BW_ENV removed (no Bitwarden credentials left on VPS)."
 echo ""
-if [ "$_phase1_exit" -eq 0 ]; then
-    echo "Next: log in as deploy via Tailscale SSH and run Phase 2:"
-    echo "   tailscale ssh deploy@\$(hostname)"
+
+if [ "$_phase1_exit" -ne 0 ]; then
+    echo "❌ Phase 1 failed (exit code: $_phase1_exit). Phase 2 was skipped."
+    exit "$_phase1_exit"
+elif [ "$_phase2_exit" -ne 0 ]; then
+    echo "⚠️  Phase 1 succeeded but Phase 2 failed (exit code: $_phase2_exit)."
+    echo "   Fix the issue, then re-run Phase 2:"
+    echo "   tailscale ssh deploy@$(hostname)"
     echo "   sudo $INSTALL_DIR/scripts/bootstrap-phase2.sh"
+    exit "$_phase2_exit"
+else
+    echo "╔════════════════════════════════════════════╗"
+    echo "║   Bootstrap Complete (Phase 1 + Phase 2)   ║"
+    echo "╚════════════════════════════════════════════╝"
+    echo ""
+    echo "   Connect as deploy user:"
+    echo "   tailscale ssh deploy@$(hostname)"
     echo ""
 fi
-
-exit "$_phase1_exit"
