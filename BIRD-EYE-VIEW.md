@@ -15,11 +15,12 @@ This architecture splits the provisioning process into a public entry point and 
 This is a lightweight, public repository designed to handle **Phase 1** of the server lifecycle. It acts as the "ignition" sequence for a fresh server.
 - **Core Script**: `run-bootstrap.sh`
 - **Function**: 
-  - Authenticates securely with Bitwarden using a temporary API key.
+  - Authenticates securely with Bitwarden using a temporary API key (or falls back to secure manual interactive prompts if Bitwarden is unavailable).
   - Fetches essential bootstrap configuration (e.g., GitHub Personal Access Token, Org names).
   - Clones the private `infra-core` repository to `/opt/infra`.
   - Executes the Initial `bootstrap-phase1.sh` script from the core repo.
   - Clears all temporary credentials from the server to prevent lingering secret exposures.
+  - Automatically prompts and executes a seamless handoff to Phase 2 operations.
 
 ### 2. `infra-core` (Private Payload & Operations)
 This private repository contains the actual operational payload, configuration templates, and day-two operation scripts.
