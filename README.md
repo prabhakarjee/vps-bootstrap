@@ -1,82 +1,64 @@
 # vps-bootstrap
 
-**Public** repo containing the single script used to bootstrap a VPS when the infrastructure repo (**infra-core**) is **private**.
+**Public** repo with a single script to bootstrap a VPS when **infra-core** is private. No secrets in this repo. The script asks for **Bitwarden access temporarily**, fetches bootstrap credentials and stores them, runs Phase 1, then **logs out of Bitwarden and removes the API key** from disk.
 
-No secrets are stored in this repo. The script asks for Bitwarden API credentials at runtime, fetches the minimal bootstrap credentials from the vault, clones the private infra-core repo, and runs Phase 1.
+## Flow
 
-## Strategy
+1. **Root login** on the VPS.
+2. **Run the script** (curl or clone this repo).
+3. **Script asks for Bitwarden API key** (temporary; not stored on VPS after Phase 1).
+4. Script **authenticates to Bitwarden**, fetches **Infra Bootstrap Env** and **stores it** to `/opt/secrets/bootstrap.env`, fetches **Infra GitHub PAT** and **GITHUB_ORG**.
+5. Script **clones private infra-core** to `/opt/infra` (PAT stripped from remote).
+6. Script runs **Phase 1** (foundation, Tailscale, **GitHub via deploy-bot PAT**, firewall).
+7. Script **logs out of Bitwarden and removes `/opt/secrets/bw.env`** — no Bitwarden credentials left on VPS.
+8. **You** log in as **deploy** via Tailscale SSH and run **Phase 2** (see infra-core [OPERATIONS.md](https://github.com/<org>/infra-core/blob/master/docs/OPERATIONS.md)).
 
-```
-Public repo (vps-bootstrap)
-    ↓
-Script asks for Bitwarden API at runtime (or reads BW_CLIENTID / BW_CLIENTSECRET)
-    ↓
-Authenticate to Bitwarden → fetch Infra GitHub PAT + GITHUB_ORG (from Infra Bootstrap Env)
-    ↓
-Clone private infra-core to /opt/infra (PAT stripped from remote after clone)
-    ↓
-Run infra-core Phase 1 (foundation, Tailscale, GitHub access, firewall)
-    ↓
-Operator logs in as deploy via Tailscale SSH and runs Phase 2 from infra-core
-```
+## GitHub: Dedicated Deploy Bot + Fine-Grained PAT
+
+Use a **Dedicated Deploy Bot** account (e.g. `myorg-deploy`) and one **Fine-Grained PAT**: **Repository access** = infra-core and the app repos the VPS needs; **Permissions** = **Contents: Read-only**. Store the PAT in Bitwarden as **Infra GitHub PAT** (Login item, Password field). One credential for all clones; clear audit trail.
+
+## Bitwarden: login once, fetch, logout
+
+The script uses Bitwarden only for this run: you provide the API key when prompted; the script fetches credentials and stores bootstrap.env; after Phase 1 it runs `bw lock` and removes `bw.env`. For **Phase 2 no-prompt** (fetch-secrets, add-app, etc.), create `/opt/secrets/bw.env` on the VPS before running Phase 2 (see infra-core OPERATIONS.md § No-prompt operation).
 
 ## Prerequisites
 
 - **VPS:** Ubuntu 22.04/24.04 (or Debian), root access.
-- **Bitwarden:** Account with these items created (exact names, case-sensitive):
-  - **Infra GitHub PAT** — Login item, Password = `ghp_...` or `github_pat_...` (read access to the private infra-core repo).
-  - **Infra Bootstrap Env** — Secure Note, Notes = content that includes `GITHUB_ORG=myorg` (your GitHub org or username).
-
-Before Phase 2 you will need the rest of the secrets listed in infra-core’s [OPERATIONS.md](https://github.com/<org>/infra-core/blob/master/docs/OPERATIONS.md) (origin cert, R2, etc.).
+- **Bitwarden** items (exact names): **Infra GitHub PAT**, **Infra Bootstrap Env** (with `GITHUB_ORG=myorg`), **Infra Tailscale Auth Key**.
+- Phase 2 needs more items (origin cert, R2, etc.); see infra-core [OPERATIONS.md](https://github.com/<org>/infra-core/blob/master/docs/OPERATIONS.md).
 
 ## Quick start
 
-On a fresh VPS as root:
-
-**Option A — one-liner (curl):**
+**As root on the VPS:**
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/<org>/vps-bootstrap/master/run-bootstrap.sh -o run-bootstrap.sh
 chmod +x run-bootstrap.sh && sudo ./run-bootstrap.sh
 ```
 
-**Option B — clone this public repo then run:**
+Or clone and run:
 
 ```bash
 git clone https://github.com/<org>/vps-bootstrap.git /tmp/vps-bootstrap
 sudo /tmp/vps-bootstrap/run-bootstrap.sh
 ```
 
-When prompted, enter your Bitwarden API key (client_id and client_secret from Bitwarden → Settings → Security → Keys → View API key). Or set them in the environment to skip prompts:
+When prompted, enter your Bitwarden API key (Settings → Security → Keys → View API key). Or set `BW_CLIENTID` and `BW_CLIENTSECRET` in the environment to skip the prompt.
 
-```bash
-sudo BW_CLIENTID=user.xxx BW_CLIENTSECRET=secret ./run-bootstrap.sh
-```
-
-The script will:
-
-1. Create `/opt/secrets/bw.env` with the Bitwarden API key (so infra-core Phase 1 can use it).
-2. Install git, curl, and Bitwarden CLI (`bw`) if needed.
-3. Log in to Bitwarden and fetch **Infra GitHub PAT** and **GITHUB_ORG** from **Infra Bootstrap Env**.
-4. Clone the private **infra-core** repo to `/opt/infra` and strip the PAT from the git remote.
-5. Run **Phase 1** from infra-core (foundation, Tailscale, GitHub access, firewall).
-
-After Phase 1 completes, log in as the deploy user via Tailscale SSH and run Phase 2:
+After Phase 1, log in as deploy and run Phase 2:
 
 ```bash
 tailscale ssh deploy@<vps-hostname>
 sudo /opt/infra/scripts/bootstrap-phase2.sh
 ```
 
+For Phase 2 to fetch secrets from Bitwarden without prompts, create `/opt/secrets/bw.env` before Phase 2.
+
 ## Repo relationship
 
 | Repo           | Visibility | Role |
 |----------------|------------|------|
-| **vps-bootstrap** | Public     | Single script: Bitwarden API → clone infra-core → run Phase 1. No secrets. |
-| **infra-core**    | Private    | Full platform: Phase 1/2, Caddy, apps, backup, operations. See [infra-core](https://github.com/<org>/infra-core) and its `docs/OPERATIONS.md`. |
+| **vps-bootstrap** | Public     | Single script: temporary Bitwarden → fetch and store bootstrap credentials → clone infra-core → Phase 1 → logout and remove bw.env. |
+| **infra-core**    | Private    | Full platform: Phase 1/2, Caddy, apps, backup. See [infra-core](https://github.com/<org>/infra-core) and `docs/OPERATIONS.md`. |
 
-System design and tech stack are documented in **sys-blueprint**; operations and runbooks live in **infra-core**.
-
-## Placeholders
-
-Replace `<org>` with your GitHub organisation or username in the URLs above.
+Replace `<org>` with your GitHub org or username.
