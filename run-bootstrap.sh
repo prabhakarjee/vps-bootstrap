@@ -192,7 +192,10 @@ if [ -n "$_notes" ]; then
             ''|\#*) ;;
             *)
                 if echo " $BOOTSTRAP_ALLOWED_KEYS " | grep -qF " ${_key} "; then
-                    printf '%s\n' "$_line" >> "$BOOTSTRAP_ENV"
+                    # Strip inline comments (e.g. VALUE   # comment → VALUE)
+                    _val="${_line#*=}"
+                    _val=$(echo "$_val" | sed 's/[[:space:]][[:space:]]*#.*$//' | sed 's/[[:space:]]*$//')
+                    printf '%s=%s\n' "$_key" "$_val" >> "$BOOTSTRAP_ENV"
                 fi
                 ;;
         esac
