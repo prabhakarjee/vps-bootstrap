@@ -152,7 +152,7 @@ echo ""
 
 # ─── Fetch GitHub PAT and GITHUB_ORG from Bitwarden ─────────────────────────
 GITHUB_TOKEN=""
-GITHUB_TOKEN=$(bw get password "Infra GitHub PAT" 2>/dev/null) || true
+GITHUB_TOKEN=$(bw get password "Infra GitHub PAT" --session "$BW_SESSION" 2>/dev/null) || true
 if [ -z "$GITHUB_TOKEN" ]; then
     echo "❌ Bitwarden item 'Infra GitHub PAT' not found or empty."
     echo "   Add a Login item: name 'Infra GitHub PAT', Password = ghp_... or github_pat_..."
@@ -162,7 +162,7 @@ fi
 GITHUB_ORG="${GITHUB_ORG:-}"
 if [ -z "$GITHUB_ORG" ]; then
     _notes=""
-    _notes=$(bw get notes "Infra Bootstrap Env" 2>/dev/null) || true
+    _notes=$(bw get notes "Infra Bootstrap Env" --session "$BW_SESSION" 2>/dev/null) || true
     if [ -n "$_notes" ]; then
         _line=$(echo "$_notes" | grep -E '^[[:space:]]*GITHUB_ORG=' | head -1)
         if [ -n "$_line" ]; then
@@ -182,7 +182,7 @@ echo "   ✓ GitHub org: $GITHUB_ORG"
 BOOTSTRAP_ENV="$SECRETS_DIR/bootstrap.env"
 BOOTSTRAP_ALLOWED_KEYS="GITHUB_ORG GITHUB_REPO_NAME DEPLOY_USER_PASSWORD VPS_HOSTNAME PRIMARY_DOMAIN MONITOR_SUBDOMAIN TZ BACKUP_CRON_TIME MAINT_CRON_TIME FETCH_SECRETS PHASE2_MODE PROVISION_KUMA RUN_BACKUP_CONFIG ADD_APPS DEPLOY_APPS"
 _notes=""
-_notes=$(bw get notes "Infra Bootstrap Env" 2>/dev/null) || true
+_notes=$(bw get notes "Infra Bootstrap Env" --session "$BW_SESSION" 2>/dev/null) || true
 if [ -n "$_notes" ]; then
     : > "$BOOTSTRAP_ENV"
     while IFS= read -r _line; do
