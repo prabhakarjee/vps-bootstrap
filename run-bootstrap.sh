@@ -53,7 +53,7 @@ fi
 echo "📊 Detected: $PRETTY_NAME"
 if [[ "$ID" != "ubuntu" && "$ID" != "debian" ]]; then
     echo "⚠️  This script is optimized for Ubuntu/Debian."
-    read -p "Continue anyway? (y/N): " confirm 2>/dev/null || true
+    read -r -p "Continue anyway? (y/N): " confirm 2>/dev/null || true
     [[ "${confirm:-n}" != "y" ]] && exit 1
 fi
 echo ""
