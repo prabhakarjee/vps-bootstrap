@@ -159,7 +159,7 @@ echo "   ✓ GitHub org: $GITHUB_ORG"
 
 # Store only allowed bootstrap config (never tenant DB, Supabase, billing, etc.)
 BOOTSTRAP_ENV="$SECRETS_DIR/bootstrap.env"
-BOOTSTRAP_ALLOWED_KEYS="GITHUB_ORG GITHUB_REPO_NAME DEPLOY_USER_PASSWORD PRIMARY_DOMAIN MONITOR_SUBDOMAIN TZ BACKUP_CRON_TIME MAINT_CRON_TIME FETCH_SECRETS PHASE2_MODE BASIC_AUTH_USER BASIC_AUTH_PASS BASIC_AUTH_HASH PROVISION_KUMA RUN_BACKUP_CONFIG ADD_APPS DEPLOY_APPS"
+BOOTSTRAP_ALLOWED_KEYS="GITHUB_ORG GITHUB_REPO_NAME DEPLOY_USER_PASSWORD VPS_HOSTNAME PRIMARY_DOMAIN MONITOR_SUBDOMAIN TZ BACKUP_CRON_TIME MAINT_CRON_TIME FETCH_SECRETS PHASE2_MODE BASIC_AUTH_USER BASIC_AUTH_PASS BASIC_AUTH_HASH PROVISION_KUMA RUN_BACKUP_CONFIG ADD_APPS DEPLOY_APPS"
 _notes=""
 _notes=$(bw get notes "Infra Bootstrap Env" 2>/dev/null) || true
 if [ -n "$_notes" ]; then
@@ -212,7 +212,10 @@ if [ -d "$INSTALL_DIR/.git" ]; then
     chmod 700 "$_cred_script"
     export GIT_ASKPASS="$_cred_script"
     export GIT_TERMINAL_PROMPT=0
-    git pull origin "$BRANCH" || true
+    if ! git pull origin "$BRANCH"; then
+        echo "❌ Failed to update infra-core (git pull origin $BRANCH)."
+        exit 1
+    fi
     cd - > /dev/null
 else
     echo "📦 Cloning private infra-core to $INSTALL_DIR..."
@@ -232,9 +235,14 @@ fi
 trap - EXIT
 cleanup_cred
 
-chown -R deploy:deploy "$INSTALL_DIR"
-find "$INSTALL_DIR/scripts" -type f -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
-echo "   ✓ infra-core ready at $INSTALL_DIR"
+# Security hardening: keep infra repo and privileged scripts root-owned so sudo path rules
+# cannot be bypassed by editing allowed script files.
+chown -R root:root "$INSTALL_DIR"
+find "$INSTALL_DIR" -type d -exec chmod 755 {} \; 2>/dev/null || true
+find "$INSTALL_DIR" -type f -exec chmod 644 {} \; 2>/dev/null || true
+find "$INSTALL_DIR/scripts" -type f -name "*.sh" -exec chmod 755 {} \; 2>/dev/null || true
+[ -f "$INSTALL_DIR/bootstrap.sh" ] && chmod 755 "$INSTALL_DIR/bootstrap.sh" 2>/dev/null || true
+echo "   ✓ infra-core ready at $INSTALL_DIR (root-owned scripts; sudo-safe)"
 echo ""
 
 # ─── Run Phase 1 ─────────────────────────────────────────────────────────────
