@@ -58,36 +58,58 @@ if [[ "$ID" != "ubuntu" && "$ID" != "debian" ]]; then
 fi
 echo ""
 
-# ─── Bitwarden API key (temporary; removed after Phase 1) ───────────────────
+# ─── BSM access token (single credential, persisted to bsm.token) ───────────
 mkdir -p "$SECRETS_DIR"
 chmod 750 "$SECRETS_DIR"
 
-echo "Bitwarden access is used only for this run. The script will log out and remove the API key from disk after Phase 1."
-echo "Get API key from: Bitwarden → Settings → Security → Keys → View API key."
+echo "  Bitwarden Secrets Manager (BSM) access token is used to fetch all infra secrets."
+echo "  Generate at: vault.bitwarden.com → Secrets Manager → Machine Accounts → New Token"
+echo "  The token is written to $SECRETS_DIR/bsm.token (root-only) and reused on every run."
 echo ""
 
-if [ -n "${BW_CLIENTID:-}" ] && [ -n "${BW_CLIENTSECRET:-}" ]; then
-    echo "📝 Using Bitwarden API key from environment."
-    tee "$BW_ENV" > /dev/null << EOF
-BW_CLIENTID=$BW_CLIENTID
-BW_CLIENTSECRET=$BW_CLIENTSECRET
-EOF
+BSM_TOKEN_FILE="$SECRETS_DIR/bsm.token"
+if [ -n "${BSM_ACCESS_TOKEN:-}" ]; then
+    echo "📝 Using BSM_ACCESS_TOKEN from environment."
+    _bsm_token="$BSM_ACCESS_TOKEN"
+elif [ -s "$BSM_TOKEN_FILE" ] && command -v bws &>/dev/null; then
+    _bsm_token=$(tr -d '[:space:]' < "$BSM_TOKEN_FILE")
+    echo "📝 Using cached BSM token from $BSM_TOKEN_FILE"
+elif [ -t 0 ]; then
+    printf "   Paste BSM Access Token: "
+    read -rs _bsm_token; echo ""
 else
-    [ -t 0 ] && read -r -p "Enter BW_CLIENTID: " BW_CLIENTID
-    [ -t 0 ] && read -r -s -p "Enter BW_CLIENTSECRET: " BW_CLIENTSECRET && echo ""
-    if [ -z "${BW_CLIENTID:-}" ] || [ -z "${BW_CLIENTSECRET:-}" ]; then
-        echo "❌ Set BW_CLIENTID and BW_CLIENTSECRET (environment or prompt)."
-        exit 1
-    fi
-    tee "$BW_ENV" > /dev/null << EOF
-BW_CLIENTID=$BW_CLIENTID
-BW_CLIENTSECRET=$BW_CLIENTSECRET
-EOF
+    echo "❌ BSM_ACCESS_TOKEN not set in environment and no TTY available."
+    exit 1
 fi
-chmod 600 "$BW_ENV"
-chown root:root "$BW_ENV"
-echo "   ✓ Bitwarden API key will be used for this run only (removed after Phase 1)"
+
+if [ -z "${_bsm_token:-}" ]; then
+    echo "❌ BSM token cannot be empty."
+    exit 1
+fi
+
+echo "$_bsm_token" > "$BSM_TOKEN_FILE"
+chmod 640 "$BSM_TOKEN_FILE"
+chown root:deploy "$BSM_TOKEN_FILE" 2>/dev/null || true
+echo "   ✓ BSM token stored → $BSM_TOKEN_FILE"
 echo ""
+
+# Install bws CLI if not present (needed to fetch GitHub PAT + bootstrap env below)
+if ! command -v bws &>/dev/null; then
+    echo "📦 Installing bws CLI..."
+    _bws_url=$(curl -s "https://api.github.com/repos/bitwarden/sdk-sm/releases/latest" \
+        | grep browser_download_url | grep "x86_64-unknown-linux-gnu.zip" | head -1 | cut -d'"' -f4 2>/dev/null) || true
+    if [ -n "$_bws_url" ]; then
+        curl -sL "$_bws_url" -o /tmp/bws.zip
+        unzip -o -q /tmp/bws.zip bws -d /usr/local/bin/ 2>/dev/null || true
+        chmod +x /usr/local/bin/bws 2>/dev/null || true
+        rm -f /tmp/bws.zip
+        echo "   ✓ bws installed"
+    else
+        echo "   ⚠  Could not install bws — install manually from https://github.com/bitwarden/sdk-sm/releases"
+    fi
+    unset _bws_url
+fi
+
 
 # ─── Dependencies ───────────────────────────────────────────────────────────
 echo "📦 Ensuring git, curl, and Bitwarden CLI..."
@@ -106,84 +128,46 @@ fi
 echo "   ✓ Dependencies ready"
 echo ""
 
-# ─── Load bw.env and authenticate ───────────────────────────────────────────
-set +x
-set -a
-# shellcheck source=/dev/null
-. "$BW_ENV" 2>/dev/null || true
-set +a
-[ -n "${BW_CLIENTID:-}" ] && export BW_CLIENTID
-[ -n "${BW_CLIENTSECRET:-}" ] && export BW_CLIENTSECRET
-[[ $- == *x* ]] && set -x
+# (BW session auth block removed — BSM token used above for all secret fetching)
 
-if [ -z "${BW_CLIENTID:-}" ] || [ -z "${BW_CLIENTSECRET:-}" ]; then
-    echo "❌ BW_CLIENTID and BW_CLIENTSECRET must be set in $BW_ENV"
+
+# ─── Fetch GitHub PAT and bootstrap env from BSM ─────────────────────────────
+if ! command -v bws &>/dev/null; then
+    echo "❌ bws CLI not found. Check install step above."
     exit 1
 fi
+_bsm_token=$(tr -d '[:space:]' < "$BSM_TOKEN_FILE" 2>/dev/null)
 
-echo "🔐 Authenticating to Bitwarden..."
-# Logout first in case a previous run left the CLI in a logged-in state
-bw logout 2>/dev/null || true
-BW_CLIENTID="$BW_CLIENTID" BW_CLIENTSECRET="$BW_CLIENTSECRET" bw login --apikey --quiet 2>/dev/null || {
-    echo "❌ Bitwarden API login failed. Check credentials in $BW_ENV"
-    exit 1
-}
-echo "   ✓ Bitwarden authenticated"
-
-_status=$(bw status 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4 2>/dev/null || echo "unauthenticated")
-if [ "$_status" = "locked" ]; then
-    echo ""
-    echo "   🔐 Bitwarden vault locked. Enter master password to unlock:"
-    set +x
-    BW_SESSION=$(bw unlock --raw 2>/dev/null </dev/tty) || {
-        echo "❌ Bitwarden unlock failed."
-        exit 1
-    }
-    export BW_SESSION
-    [[ $- == *x* ]] && set -x
-    echo "   ✓ Bitwarden unlocked for this session"
-elif [ "$_status" = "unlocked" ]; then
-    echo "   ✓ Bitwarden already unlocked"
-else
-    echo "❌ Bitwarden status check failed: $_status"
-    exit 1
-fi
-echo ""
-
-# ─── Fetch GitHub PAT and GITHUB_ORG from Bitwarden ─────────────────────────
 GITHUB_TOKEN=""
-GITHUB_TOKEN=$(bw get password "Infra GitHub PAT" --session "$BW_SESSION" 2>/dev/null) || true
+if [ -n "${BSM_ID_GITHUB_PAT:-}" ] && [ "${BSM_ID_GITHUB_PAT}" != "00000000-0000-0000-0000-000000000000" ]; then
+    GITHUB_TOKEN=$(BWS_ACCESS_TOKEN="$_bsm_token" bws secret get "$BSM_ID_GITHUB_PAT" --output json 2>/dev/null \
+        | python3 -c "import sys,json; print(json.load(sys.stdin).get('value',''), end='')" 2>/dev/null) || true
+fi
 if [ -z "$GITHUB_TOKEN" ]; then
-    echo "❌ Bitwarden item 'Infra GitHub PAT' not found or empty."
-    echo "   Add a Login item: name 'Infra GitHub PAT', Password = ghp_... or github_pat_..."
+    echo "❌ GitHub PAT not found in BSM (BSM_ID_GITHUB_PAT)."
+    echo "   Ensure bsm-ids.conf has BSM_ID_GITHUB_PAT set and the secret exists in BSM."
     exit 1
 fi
 
 GITHUB_ORG="${GITHUB_ORG:-}"
-if [ -z "$GITHUB_ORG" ]; then
-    _notes=""
-    _notes=$(bw get notes "Infra Bootstrap Env" --session "$BW_SESSION" 2>/dev/null) || true
-    if [ -n "$_notes" ]; then
+if [ -z "$GITHUB_ORG" ] && [ -n "${BSM_ID_BOOTSTRAP_ENV:-}" ] && [ "${BSM_ID_BOOTSTRAP_ENV}" != "00000000-0000-0000-0000-000000000000" ]; then
+    _notes=$(BWS_ACCESS_TOKEN="$_bsm_token" bws secret get "$BSM_ID_BOOTSTRAP_ENV" --output json 2>/dev/null \
+        | python3 -c "import sys,json; print(json.load(sys.stdin).get('value',''), end='')" 2>/dev/null) || true
+    if [ -n "${_notes:-}" ]; then
         _line=$(echo "$_notes" | grep -E '^[[:space:]]*GITHUB_ORG=' | head -1)
-        if [ -n "$_line" ]; then
-            GITHUB_ORG="${_line#*=}"
-            GITHUB_ORG="${GITHUB_ORG%%#*}"
-            GITHUB_ORG=$(echo "$GITHUB_ORG" | tr -d '"' | tr -d "'" | xargs)
-        fi
+        [ -n "$_line" ] && GITHUB_ORG="${_line#*=}" && GITHUB_ORG=$(echo "$GITHUB_ORG" | sed "s/^['\"]//;s/['\"]$//" | tr -d "'\"" | xargs)
     fi
 fi
 if [ -z "$GITHUB_ORG" ]; then
-    echo "❌ GITHUB_ORG not set. Add GITHUB_ORG=myorg to Bitwarden Secure Note 'Infra Bootstrap Env', or run: sudo GITHUB_ORG=myorg ./run-bootstrap.sh"
+    echo "❌ GITHUB_ORG not found. Add it to BSM secret BOOTSTRAP_ENV or set: sudo GITHUB_ORG=myorg ./run-bootstrap.sh"
     exit 1
 fi
 echo "   ✓ GitHub org: $GITHUB_ORG"
 
-# Store only allowed bootstrap config (never tenant DB, Supabase, billing, etc.)
+# Store allowed bootstrap config keys
 BOOTSTRAP_ENV="$SECRETS_DIR/bootstrap.env"
 BOOTSTRAP_ALLOWED_KEYS="GITHUB_ORG GITHUB_REPO_NAME DEPLOY_USER_PASSWORD VPS_HOSTNAME PRIMARY_DOMAIN MONITOR_SUBDOMAIN TZ BACKUP_CRON_TIME MAINT_CRON_TIME FETCH_SECRETS PHASE2_MODE PROVISION_KUMA RUN_BACKUP_CONFIG ADD_APPS DEPLOY_APPS"
-_notes=""
-_notes=$(bw get notes "Infra Bootstrap Env" --session "$BW_SESSION" 2>/dev/null) || true
-if [ -n "$_notes" ]; then
+if [ -n "${_notes:-}" ] && echo "$_notes" | grep -q "="; then
     : > "$BOOTSTRAP_ENV"
     while IFS= read -r _line; do
         _key="${_line%%=*}"
@@ -192,21 +176,20 @@ if [ -n "$_notes" ]; then
             ''|\#*) ;;
             *)
                 if echo " $BOOTSTRAP_ALLOWED_KEYS " | grep -qF " ${_key} "; then
-                    # Strip inline comments (e.g. VALUE   # comment → VALUE)
                     _val="${_line#*=}"
                     _val=$(echo "$_val" | sed 's/[[:space:]][[:space:]]*#.*$//' | sed 's/[[:space:]]*$//')
-                    # Single-quote values to prevent shell special chars (&, ^, !) from being interpreted
-                    _val_escaped=$(printf '%s' "$_val" | sed "s/'/'\\\\''/g")
+                    _val_escaped=$(printf '%s' "$_val" | sed "s/'/'\\''/g")
                     printf "%s='%s'\n" "$_key" "$_val_escaped" >> "$BOOTSTRAP_ENV"
                 fi
                 ;;
         esac
     done <<< "$_notes"
+    unset _notes
     chmod 640 "$BOOTSTRAP_ENV"
     chown root:root "$BOOTSTRAP_ENV"
-    echo "   ✓ Bootstrap config stored → $BOOTSTRAP_ENV (allowed keys only; no app/tenant secrets)"
+    echo "   ✓ Bootstrap config stored → $BOOTSTRAP_ENV (allowed keys only)"
 else
-    echo "   ⚠  Bitwarden item 'Infra Bootstrap Env' empty or missing; Phase 2 may prompt for config."
+    echo "   ⚠  BSM secret BOOTSTRAP_ENV empty or missing; Phase 2 may prompt for config."
 fi
 echo ""
 
