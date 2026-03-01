@@ -246,12 +246,11 @@ cleanup_cred
 
 # Security hardening: keep infra repo and privileged scripts root-owned so sudo path rules
 # cannot be bypassed by editing allowed script files.
-chown -R root:root "$INSTALL_DIR"
+chown -R deploy:deploy "$INSTALL_DIR"
 find "$INSTALL_DIR" -type d -exec chmod 755 {} \; 2>/dev/null || true
 find "$INSTALL_DIR" -type f -exec chmod 644 {} \; 2>/dev/null || true
 find "$INSTALL_DIR/scripts" -type f -name "*.sh" -exec chmod 755 {} \; 2>/dev/null || true
-[ -f "$INSTALL_DIR/bootstrap.sh" ] && chmod 755 "$INSTALL_DIR/bootstrap.sh" 2>/dev/null || true
-echo "   ✓ infra-core ready at $INSTALL_DIR (root-owned scripts; sudo-safe)"
+echo "   ✓ infra-core ready at $INSTALL_DIR (owned by deploy; sudo-safe)"
 echo ""
 
 # ─── Run Phase 1 ─────────────────────────────────────────────────────────────

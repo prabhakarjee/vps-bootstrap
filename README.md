@@ -48,6 +48,5 @@ infra status
 ---
 
 ## What to Read Next
-- [Infrastructure Gap Rating `INFRA-RATING.md`](INFRA-RATING.md) - A frank score on scalability vs security.
-- [`BIRD-EYE-VIEW.md`](BIRD-EYE-VIEW.md) - How `vps-bootstrap` and `infra-core` intertwine safely.
-- [Production Readiness Checklist](PRODUCTION-CHECKLIST.md) - Final validation before traffic ingress.
+After Phase 2 finishes, the primary source of truth for all commands and architecture is in the `infra-core` repository.
+- Review the **[OPERATIONS.md](https://github.com/prabhakarjee/infra-core/blob/master/docs/OPERATIONS.md)** file in `infra-core` to manage your deployments.
