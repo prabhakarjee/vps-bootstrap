@@ -8,17 +8,14 @@
 #
 # Flow:
 #   1. Root login → run this script as root.
-#   2. Script asks for Bitwarden API key (temporary; or set BW_CLIENTID/BW_CLIENTSECRET in env).
-#   3. Script authenticates to Bitwarden, fetches "Infra Bootstrap Env" and stores
-#      it to /opt/secrets/bootstrap.env; fetches GitHub PAT and GITHUB_ORG for clone.
+#   2. Script asks for BSM Access Token (temporary; or set BSM_ACCESS_TOKEN in env).
+#   3. Script fetches "BOOTSTRAP_ENV" via BSM and stores it to /opt/secrets/bootstrap.env; fetches GitHub PAT and GITHUB_ORG for clone.
 #   4. Clones private infra-core to /opt/infra, strips PAT from git remote.
-#   5. Writes bw.env temporarily so Phase 1 can use it (Tailscale, GitHub PAT for deploy user).
-#   6. Runs Phase 1 (foundation, Tailscale, GitHub access via deploy-bot PAT, firewall).
-#   7. After Phase 1: full logout (bw logout), unset BW_*, history -c, and removes /opt/secrets/bw.env.
-#   8. You log in as deploy via Tailscale SSH and run Phase 2.
+#   5. Runs Phase 1 (foundation, Tailscale, GitHub access via deploy-bot PAT, firewall).
+#   6. Runs Phase 2 as the deploy user without requiring any further interactive prompts.
 #
 # GitHub: Use a Dedicated Deploy Bot account + one Fine-Grained PAT (Contents: Read
-# for infra-core and app repos). Store the PAT in Bitwarden as "Infra GitHub PAT".
+# for infra-core and app repos). Store the PAT in Bitwarden Secrets Manager mapped to BSM_ID_GITHUB_PAT.
 #
 # Usage:
 #   curl -sSL https://raw.githubusercontent.com/<org>/vps-bootstrap/master/run-bootstrap.sh -o run-bootstrap.sh
@@ -112,24 +109,13 @@ fi
 
 
 # ─── Dependencies ───────────────────────────────────────────────────────────
-echo "📦 Ensuring git, curl, and Bitwarden CLI..."
+echo "📦 Ensuring git and curl..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq git curl > /dev/null 2>&1
 
-if ! command -v bw &>/dev/null; then
-    if command -v snap &>/dev/null; then
-        snap install bw 2>/dev/null || { echo "❌ snap install bw failed"; exit 1; }
-    else
-        echo "❌ Install Bitwarden CLI: snap install bw  OR  npm i -g @bitwarden/cli"
-        exit 1
-    fi
-fi
 echo "   ✓ Dependencies ready"
 echo ""
-
-# (BW session auth block removed — BSM token used above for all secret fetching)
-
 
 # ─── Fetch GitHub PAT and bootstrap env from BSM ─────────────────────────────
 if ! command -v bws &>/dev/null; then
@@ -259,29 +245,23 @@ echo ""
 _phase1_exit=0
 bash "$INSTALL_DIR/scripts/bootstrap-phase1.sh" || _phase1_exit=$?
 
-# ─── Run Phase 2 automatically (Bitwarden still active) ─────────────────────
+# ─── Run Phase 2 automatically (BSM Token still active) ─────────────────────
 _phase2_exit=0
 if [ "$_phase1_exit" -eq 0 ]; then
     echo ""
     echo "🔧 Running Phase 2 (Caddy, secrets, apps, cron)..."
     echo ""
-    # Pass BW credentials to Phase 2 so it doesn't re-prompt
-    export BW_SESSION BW_CLIENTID BW_CLIENTSECRET
-    export BITWARDEN_CLEANUP_SKIP=1  # Phase 2 should not logout; we do it below
+    # Pass BSM token to Phase 2 so it doesn't re-prompt
+    export BSM_ACCESS_TOKEN="$_bsm_token"
     bash "$INSTALL_DIR/scripts/bootstrap-phase2.sh" || _phase2_exit=$?
-    unset BITWARDEN_CLEANUP_SKIP
 fi
 
-# ─── Full Bitwarden logout and remove API key from disk ──────────────────────
+# ─── Cleanup BSM Token from memory ───────────────────────────────────────────
 echo ""
-echo "🔒 Logging out of Bitwarden and removing API key from disk..."
-if command -v bw &>/dev/null; then
-    bw logout >/dev/null 2>&1 || true
-fi
-unset BW_SESSION BW_CLIENTID BW_CLIENTSECRET 2>/dev/null || true
+echo "🔒 Clearing BSM Access Token from process memory..."
+unset BSM_ACCESS_TOKEN _bsm_token 2>/dev/null || true
 history -c 2>/dev/null || true
-rm -f "$BW_ENV"
-echo "   ✓ Bitwarden logged out (session cleared); $BW_ENV removed (no Bitwarden credentials left on VPS)."
+echo "   ✓ Secrets cleared from environment."
 echo ""
 
 if [ "$_phase1_exit" -ne 0 ]; then
