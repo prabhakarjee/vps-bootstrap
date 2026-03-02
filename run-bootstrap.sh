@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # run-bootstrap.sh — Public entry point for VPS bootstrap
-# Version: 2026-03-02-V5
+# Version: 2026-03-02-V7
 #
 # Forces bash if accidentally run by sh
 if [ -z "${BASH_VERSION:-}" ]; then
@@ -121,6 +121,7 @@ if [ -n "$_secrets_json" ]; then
     find_id() { echo "$_secrets_json" | jq -r ".[] | select(.key == \"$1\") | .id" 2>/dev/null | head -1; }
     [ -z "${BSM_ID_GITHUB_PAT:-}" ] || [ "${BSM_ID_GITHUB_PAT}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_GITHUB_PAT=$(find_id "GITHUB_PAT")
     [ -z "${BSM_ID_BOOTSTRAP_ENV:-}" ] || [ "${BSM_ID_BOOTSTRAP_ENV}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_BOOTSTRAP_ENV=$(find_id "BOOTSTRAP_ENV")
+    [ -z "${BSM_ID_DEPLOY_PASSWORD:-}" ] || [ "${BSM_ID_DEPLOY_PASSWORD}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_DEPLOY_PASSWORD=$(find_id "DEPLOY_PASSWORD")
 fi
 
 GITHUB_TOKEN=""
@@ -176,7 +177,25 @@ if [ -n "${_notes:-}" ] && echo "$_notes" | grep -q "="; then
     echo "   ✓ Bootstrap config stored → $BOOTSTRAP_ENV (allowed keys only)"
 else
     echo "   ⚠  BSM secret BOOTSTRAP_ENV empty or missing; Phase 2 may prompt for config."
+    : > "$BOOTSTRAP_ENV"
 fi
+
+# Inject DEPLOY_USER_PASSWORD from separate DEPLOY_PASSWORD secret if found
+if [ -n "${BSM_ID_DEPLOY_PASSWORD:-}" ] && [ "${BSM_ID_DEPLOY_PASSWORD}" != "00000000-0000-0000-0000-000000000000" ]; then
+    _deploy_pass=$(BWS_ACCESS_TOKEN="$_bsm_token" bws secret get "$BSM_ID_DEPLOY_PASSWORD" --output json 2>/dev/null \
+        | jq -r ".value" 2>/dev/null) || true
+    if [ -n "$_deploy_pass" ]; then
+        # Remove any existing DEPLOY_USER_PASSWORD line to avoid duplicates
+        if [ -f "$BOOTSTRAP_ENV" ]; then
+            sed -i '/^DEPLOY_USER_PASSWORD=/d' "$BOOTSTRAP_ENV"
+        fi
+        _pass_escaped=$(printf '%s' "$_deploy_pass" | sed "s/'/'\\''/g")
+        printf "DEPLOY_USER_PASSWORD='%s'\n" "$_pass_escaped" >> "$BOOTSTRAP_ENV"
+        echo "   ✓ Deploy password fetched from BSM and added to config."
+    fi
+fi
+chmod 640 "$BOOTSTRAP_ENV"
+chown root:deploy "$BOOTSTRAP_ENV" 2>/dev/null || true
 echo ""
 
 # ─── Deploy user (needed before clone so we can chown) ──────────────────────
