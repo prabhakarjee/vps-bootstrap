@@ -90,6 +90,14 @@ chown root:deploy "$BSM_TOKEN_FILE" 2>/dev/null || true
 echo "   ✓ BSM token stored → $BSM_TOKEN_FILE"
 echo ""
 
+# ─── Dependencies ───────────────────────────────────────────────────────────
+echo "📦 Ensuring git, curl, and unzip..."
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -qq
+apt-get install -y -qq git curl unzip jq > /dev/null 2>&1
+echo "   ✓ Dependencies ready"
+echo ""
+
 # Install bws CLI if not present (needed to fetch GitHub PAT + bootstrap env below)
 if ! command -v bws &>/dev/null; then
     echo "📦 Installing bws CLI..."
@@ -106,16 +114,6 @@ if ! command -v bws &>/dev/null; then
     fi
     unset _bws_url
 fi
-
-
-# ─── Dependencies ───────────────────────────────────────────────────────────
-echo "📦 Ensuring git and curl..."
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq git curl > /dev/null 2>&1
-
-echo "   ✓ Dependencies ready"
-echo ""
 
 # ─── Fetch GitHub PAT and bootstrap env from BSM ─────────────────────────────
 if ! command -v bws &>/dev/null; then
