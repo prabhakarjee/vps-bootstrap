@@ -1,30 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # run-bootstrap.sh — Public entry point for VPS bootstrap
-# Version: 2026-03-02-V4
+# Version: 2026-03-02-V5
 #
-# This script lives in the PUBLIC repo "vps-bootstrap". It asks for Bitwarden
-# access temporarily, fetches bootstrap credentials and stores them, runs Phase 1,
-# then logs out of Bitwarden and removes the API key from disk. No Bitwarden
-# credentials persist on the VPS after bootstrap.
-#
-# Flow:
-#   1. Root login → run this script as root.
-#   2. Script asks for BSM Access Token (temporary; or set BSM_ACCESS_TOKEN in env).
-#   3. Script fetches "BOOTSTRAP_ENV" via BSM and stores it to /opt/secrets/bootstrap.env; fetches GitHub PAT and GITHUB_ORG for clone.
-#   4. Clones private infra-core to /opt/infra, strips PAT from git remote.
-#   5. Runs Phase 1 (foundation, Tailscale, GitHub access via deploy-bot PAT, firewall).
-#   6. Runs Phase 2 as the deploy user without requiring any further interactive prompts.
-#
-# GitHub: Use a Dedicated Deploy Bot account + one Fine-Grained PAT (Contents: Read
-# for infra-core and app repos). Store the PAT in Bitwarden Secrets Manager mapped to BSM_ID_GITHUB_PAT.
-#
-# Usage:
-#   curl -sSL https://raw.githubusercontent.com/<org>/vps-bootstrap/master/run-bootstrap.sh -o run-bootstrap.sh
-#   chmod +x run-bootstrap.sh && sudo ./run-bootstrap.sh
-#
-# Required Bitwarden items: "Infra GitHub PAT", "Infra Bootstrap Env" (with GITHUB_ORG), "Infra Tailscale Auth Key".
+# Forces bash if accidentally run by sh
+if [ -z "${BASH_VERSION:-}" ]; then
+    exec bash "$0" "$@"
+fi
 
-set -euo pipefail
+set -eu
+set -o pipefail
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 SECRETS_DIR="${SECRETS_DIR:-/opt/secrets}"
