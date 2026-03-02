@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # run-bootstrap.sh — Public entry point for VPS bootstrap
-# Version: 2026-03-02-V10
+# Version: 2026-03-02-V11
 #
 # Forces bash if accidentally run by sh
 if [ -z "${BASH_VERSION:-}" ]; then
@@ -151,16 +151,17 @@ if [ -n "$_secrets_json" ]; then
     fi
 fi
 
-GITHUB_TOKEN=""
+GITHUB_PAT=""
 if [ -n "${BSM_ID_GITHUB_PAT:-}" ] && [ "${BSM_ID_GITHUB_PAT}" != "00000000-0000-0000-0000-000000000000" ]; then
-    GITHUB_TOKEN=$(BWS_ACCESS_TOKEN="$_bsm_token" bws secret get "$BSM_ID_GITHUB_PAT" --output json 2>/dev/null \
+    GITHUB_PAT=$(BWS_ACCESS_TOKEN="$_bsm_token" bws secret get "$BSM_ID_GITHUB_PAT" --output json 2>/dev/null \
         | jq -r ".value" 2>/dev/null) || true
 fi
-if [ -z "$GITHUB_TOKEN" ]; then
+if [ -z "$GITHUB_PAT" ]; then
     echo "❌ GitHub PAT not found in BSM."
     echo "   Ensure a secret named 'GITHUB_PAT' exists in your BSM Project."
     exit 1
 fi
+export GITHUB_PAT
 
 GITHUB_ORG="${GITHUB_ORG:-}"
 _notes=""
