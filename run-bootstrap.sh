@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # run-bootstrap.sh — Public entry point for VPS bootstrap
-# Version: 2026-03-02-V8
+# Version: 2026-03-02-V9
 #
 # Forces bash if accidentally run by sh
 if [ -z "${BASH_VERSION:-}" ]; then
@@ -122,7 +122,14 @@ if [ -n "$_secrets_json" ]; then
     [ -z "${BSM_ID_GITHUB_PAT:-}" ] || [ "${BSM_ID_GITHUB_PAT}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_GITHUB_PAT=$(find_id "GITHUB_PAT")
     [ -z "${BSM_ID_BOOTSTRAP_ENV:-}" ] || [ "${BSM_ID_BOOTSTRAP_ENV}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_BOOTSTRAP_ENV=$(find_id "BOOTSTRAP_ENV")
     [ -z "${BSM_ID_DEPLOY_PASSWORD:-}" ] || [ "${BSM_ID_DEPLOY_PASSWORD}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_DEPLOY_PASSWORD=$(find_id "DEPLOY_PASSWORD")
-    [ -z "${BSM_ID_TAILSCALE_KEY:-}" ] || [ "${BSM_ID_TAILSCALE_KEY}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_TAILSCALE_KEY=$(find_id "TAILSCALE_KEY")
+    
+    # Discovery with fallback: Try exact name, then try case-insensitive "tailscale"
+    if [ -z "${BSM_ID_TAILSCALE_KEY:-}" ] || [ "${BSM_ID_TAILSCALE_KEY}" = "00000000-0000-0000-0000-000000000000" ]; then
+        BSM_ID_TAILSCALE_KEY=$(find_id "TAILSCALE_KEY")
+        if [ -z "$BSM_ID_TAILSCALE_KEY" ]; then
+             BSM_ID_TAILSCALE_KEY=$(echo "$_secrets_json" | jq -r '.[] | select(.key | ascii_downcase | contains("tailscale")) | .id' 2>/dev/null | head -1)
+        fi
+    fi
 fi
 
 GITHUB_TOKEN=""
