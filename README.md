@@ -13,8 +13,8 @@ This repository contains a singular, foolproof script (`run-bootstrap.sh`). It i
 1. Securely queries your Bitwarden vault via its API for a temporary run.
 2. Extracts your GitHub Personal Access Token and your specific domain/environment configurations.
 3. Authenticates and Clones your private `infra-core` ecosystem into `/opt/infra`.
-4. Executes the Phase 1 hardening sequence (Tailscale SSH enforcement, Basic Dependencies, UFW Firewall).
-5. Prompts to seamlessly transition into Phase 2 Application automation (via `bootstrap-phase2.sh`).
+4. Executes the Phase 1 **Zero-Touch** hardening sequence (Tailscale SSH, Basic Deps, UFW Firewall).
+5. Prompts to seamlessly transition into Phase 2 **Automated** Application automation (via `bootstrap-phase2.sh`).
 
 *Zero secrets are ever persisted to the disk after Phase 1 terminates.*
 
