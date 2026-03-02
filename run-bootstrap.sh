@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # run-bootstrap.sh — Public entry point for VPS bootstrap
-# Version: 2026-03-02-V13
+# Version: 2026-03-02-V14
 #
 # Forces bash if accidentally run by sh
 if [ -z "${BASH_VERSION:-}" ]; then
@@ -135,19 +135,45 @@ _bsm_token=$(tr -d '[:space:]' < "$BSM_TOKEN_FILE" 2>/dev/null)
 
 # Automatic Discovery: If IDs are missing, find them by name
 echo "🔍 Discovering secret IDs from Bitwarden..."
-_secrets_json=$(BWS_ACCESS_TOKEN="$_bsm_token" bws secret list --output json 2>/dev/null) || true
-if [ -n "$_secrets_json" ]; then
-    find_id() { echo "$_secrets_json" | jq -r ".[] | select(.key == \"$1\") | .id" 2>/dev/null | head -1; }
+_secrets_err=$(mktemp)
+_secrets_json=$(BWS_ACCESS_TOKEN="$_bsm_token" bws secret list --output json 2>"$_secrets_err") || true
+_err_content=$(cat "$_secrets_err")
+rm -f "$_secrets_err"
+
+if [ -n "$_err_content" ]; then
+    echo "   ⚠️  Bitwarden CLI reported an error:"
+    echo "      $_err_content"
+fi
+
+if [ -n "$_secrets_json" ] && [ "$_secrets_json" != "[]" ]; then
+    _count=$(echo "$_secrets_json" | jq '. | length' 2>/dev/null || echo "0")
+    echo "   ✓ Connected to BSM: $_count secrets found in current project."
+    
+    # helper: find by exact key, then case-insensitive, then partial match
+    find_id() {
+        local _k="$1"
+        local _id=""
+        # 1. Exact match
+        _id=$(echo "$_secrets_json" | jq -r ".[] | select(.key == \"$_k\") | .id" 2>/dev/null | head -1)
+        # 2. Case-insensitive match (fallback)
+        if [ -z "$_id" ] || [ "$_id" = "null" ]; then
+            _id=$(echo "$_secrets_json" | jq -r ".[] | select(.key | ascii_downcase == (\"$_k\" | ascii_downcase)) | .id" 2>/dev/null | head -1)
+        fi
+        # 3. Partial match (last resort fallback)
+        if [ -z "$_id" ] || [ "$_id" = "null" ]; then
+            _id=$(echo "$_secrets_json" | jq -r ".[] | select(.key | ascii_downcase | contains(\"$_k\" | ascii_downcase)) | .id" 2>/dev/null | head -1)
+        fi
+        [ "$_id" = "null" ] && _id=""
+        echo "$_id"
+    }
+
     [ -z "${BSM_ID_GITHUB_PAT:-}" ] || [ "${BSM_ID_GITHUB_PAT}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_GITHUB_PAT=$(find_id "GITHUB_PAT")
     [ -z "${BSM_ID_BOOTSTRAP_ENV:-}" ] || [ "${BSM_ID_BOOTSTRAP_ENV}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_BOOTSTRAP_ENV=$(find_id "BOOTSTRAP_ENV")
     [ -z "${BSM_ID_DEPLOY_PASSWORD:-}" ] || [ "${BSM_ID_DEPLOY_PASSWORD}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_DEPLOY_PASSWORD=$(find_id "DEPLOY_PASSWORD")
     
-    # Discovery with fallback: Try exact name, then try case-insensitive "tailscale"
+    # Discovery with fallback (Tailscale specifically)
     if [ -z "${BSM_ID_TAILSCALE_KEY:-}" ] || [ "${BSM_ID_TAILSCALE_KEY}" = "00000000-0000-0000-0000-000000000000" ]; then
         BSM_ID_TAILSCALE_KEY=$(find_id "TAILSCALE_KEY")
-        if [ -z "$BSM_ID_TAILSCALE_KEY" ]; then
-             BSM_ID_TAILSCALE_KEY=$(echo "$_secrets_json" | jq -r '.[] | select(.key | ascii_downcase | contains("tailscale")) | .id' 2>/dev/null | head -1)
-        fi
     fi
 
     # Discovery for Phase 2: Certs, R2, Kuma, Alerts
@@ -166,6 +192,9 @@ if [ -n "$_secrets_json" ]; then
     BSM_ID_SMTP_FROM=$(find_id "SMTP_FROM")
     BSM_ID_SMTP_TO=$(find_id "SMTP_TO")
     BSM_ID_BACKUP_KEY=$(find_id "BACKUP_KEY")
+else
+    echo "   ⚠️  No secrets found in BSM or 'bws secret list' returned empty."
+    echo "      Check your BSM Access Token permissions or Project membership."
 fi
 
 GITHUB_PAT=""
