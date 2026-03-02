@@ -1,5 +1,5 @@
-#!/bin/bash
-# run-bootstrap.sh — Public entry point for VPS bootstrap when infra-core is private.
+# run-bootstrap.sh — Public entry point for VPS bootstrap
+# Version: 2026-03-02-V3
 #
 # This script lives in the PUBLIC repo "vps-bootstrap". It asks for Bitwarden
 # access temporarily, fetches bootstrap credentials and stores them, runs Phase 1,
@@ -24,6 +24,7 @@
 # Required Bitwarden items: "Infra GitHub PAT", "Infra Bootstrap Env" (with GITHUB_ORG), "Infra Tailscale Auth Key".
 
 set -euo pipefail
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 SECRETS_DIR="${SECRETS_DIR:-/opt/secrets}"
 BW_ENV="$SECRETS_DIR/bw.env"
@@ -91,7 +92,7 @@ echo "   ✓ BSM token stored → $BSM_TOKEN_FILE"
 echo ""
 
 # ─── Dependencies ───────────────────────────────────────────────────────────
-echo "📦 Ensuring git, curl, and unzip..."
+echo "📦 Ensuring system dependencies (git, curl, unzip, jq)..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq git curl unzip jq > /dev/null 2>&1
@@ -100,17 +101,23 @@ echo ""
 
 # Install bws CLI if not present (needed to fetch GitHub PAT + bootstrap env below)
 if ! command -v bws &>/dev/null; then
-    echo "📦 Installing bws CLI..."
+    echo "📦 Installing bws CLI to /usr/local/bin..."
     _bws_url=$(curl -s "https://api.github.com/repos/bitwarden/sdk-sm/releases" \
         | grep -oP '"browser_download_url": "\K(.*bws-x86_64-unknown-linux-gnu.*\.zip)(?=")' | head -1 2>/dev/null) || true
     if [ -n "$_bws_url" ]; then
         curl -sL "$_bws_url" -o /tmp/bws.zip
-        unzip -o -q /tmp/bws.zip bws -d /usr/local/bin/ 2>/dev/null || true
-        chmod +x /usr/local/bin/bws 2>/dev/null || true
+        # Extract and ensure it actually exists
+        unzip -o -q /tmp/bws.zip bws -d /usr/local/bin/
+        chmod +x /usr/local/bin/bws
         rm -f /tmp/bws.zip
-        echo "   ✓ bws installed"
+        if ! command -v bws &>/dev/null; then
+             echo "❌ bws extraction failed or /usr/local/bin not in PATH"
+             exit 1
+        fi
+        echo "   ✓ bws installed successfully"
     else
-        echo "   ⚠  Could not install bws — install manually from https://github.com/bitwarden/sdk-sm/releases"
+        echo "❌ Could not find bws download URL. Bitwarden might have changed their release page structure again."
+        exit 1
     fi
     unset _bws_url
 fi
