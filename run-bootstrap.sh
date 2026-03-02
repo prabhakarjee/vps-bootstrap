@@ -190,7 +190,11 @@ if [ -n "$_secrets_json" ] && [ "$_secrets_json" != "[]" ]; then
     BSM_ID_SMTP_HOST=$(find_id "SMTP_HOST")
     BSM_ID_SMTP_PORT=$(find_id "SMTP_PORT")
     BSM_ID_SMTP_FROM=$(find_id "SMTP_FROM")
+    BSM_ID_SMTP_USER=$(find_id "SMTP_USER")
+    BSM_ID_SMTP_PASS=$(find_id "SMTP_PASS")
+    BSM_ID_SMTP_TLS=$(find_id "SMTP_TLS")
     BSM_ID_SMTP_TO=$(find_id "SMTP_TO")
+    BSM_ID_PG_PASS=$(find_id "PG_PASS")
     BSM_ID_BACKUP_KEY=$(find_id "BACKUP_KEY")
 else
     echo "   ⚠️  No secrets found in BSM or 'bws secret list' returned empty."
@@ -367,7 +371,11 @@ mkdir -p "$INSTALL_DIR/var"
     [ -n "${BSM_ID_SMTP_HOST:-}" ] && echo "BSM_ID_SMTP_HOST=$BSM_ID_SMTP_HOST"
     [ -n "${BSM_ID_SMTP_PORT:-}" ] && echo "BSM_ID_SMTP_PORT=$BSM_ID_SMTP_PORT"
     [ -n "${BSM_ID_SMTP_FROM:-}" ] && echo "BSM_ID_SMTP_FROM=$BSM_ID_SMTP_FROM"
+    [ -n "${BSM_ID_SMTP_USER:-}" ] && echo "BSM_ID_SMTP_USER=$BSM_ID_SMTP_USER"
+    [ -n "${BSM_ID_SMTP_PASS:-}" ] && echo "BSM_ID_SMTP_PASS=$BSM_ID_SMTP_PASS"
+    [ -n "${BSM_ID_SMTP_TLS:-}" ] && echo "BSM_ID_SMTP_TLS=$BSM_ID_SMTP_TLS"
     [ -n "${BSM_ID_SMTP_TO:-}" ] && echo "BSM_ID_SMTP_TO=$BSM_ID_SMTP_TO"
+    [ -n "${BSM_ID_PG_PASS:-}" ] && echo "BSM_ID_PG_PASS=$BSM_ID_PG_PASS"
     [ -n "${BSM_ID_BACKUP_KEY:-}" ] && echo "BSM_ID_BACKUP_KEY=$BSM_ID_BACKUP_KEY"
 } > "$_bsm_ids_file"
 chmod 644 "$_bsm_ids_file"

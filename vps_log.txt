@@ -1,0 +1,1080 @@
+root@srv1260741:~# curl -sSL https://raw.githubusercontent.com/prabhakarjee/vps-bootstrap/master/run-bootstrap.sh -o run-bootstrap.sh
+chmod +x run-bootstrap.sh
+sudo ./run-bootstrap.sh
+╔════════════════════════════════════════════╗
+║  VPS Bootstrap (Bitwarden → infra-core)    ║
+╚════════════════════════════════════════════╝
+
+📊 Detected: Ubuntu 24.04.4 LTS
+
+  Bitwarden Secrets Manager (BSM) access token is used to fetch all infra secrets.
+  Generate at: vault.bitwarden.com → Secrets Manager → Machine Accounts → New Token
+  The token is written to /opt/secrets/bsm.token (root-only) and reused on every run.
+
+   Paste BSM Access Token:
+   ✓ BSM token stored → /opt/secrets/bsm.token
+
+⏳ Waiting for apt lock... done.
+📦 Ensuring system dependencies (git, curl, unzip, jq)...
+   ✓ Dependencies ready
+
+📦 Installing bws CLI to /usr/local/bin...
+   ✓ bws installed successfully
+🔍 Discovering secret IDs from Bitwarden...
+   ✓ Connected to BSM: 21 secrets found in current project.
+   ✓ GitHub org: prabhakarjee
+   ✓ Bootstrap config stored → /opt/secrets/bootstrap.env (allowed keys only)
+   ✓ Deploy password fetched from BSM and added to config.
+   ✓ Tailscale key fetched from BSM and added to config.
+
+👤 Creating deploy user...
+   ✓ Deploy user created (Docker group added in Phase 1)
+📦 Cloning private infra-core to /opt/infra...
+Cloning into '/opt/infra'...
+remote: Enumerating objects: 1634, done.
+remote: Counting objects: 100% (57/57), done.
+remote: Compressing objects: 100% (41/41), done.
+remote: Total 1634 (delta 24), reused 36 (delta 13), pack-reused 1577 (from 1)
+Receiving objects: 100% (1634/1634), 702.22 KiB | 2.80 MiB/s, done.
+Resolving deltas: 100% (1046/1046), done.
+   ✓ Clone done (PAT via helper, not in process list); token file removed
+   ✓ infra-core ready at /opt/infra (owned by deploy; sudo-safe)
+   ✓ BSM ID mapping auto-populated → /opt/infra/var/bsm-ids.conf
+
+🔧 Running Phase 1 (foundation, Tailscale, GitHub access, firewall)...
+
+════════════════════════════════════════
+  Phase 1: Foundation & Tailscale SSH
+════════════════════════════════════════
+
+Infra-Core Version: 1.3.0
+
+════════════════════════════════════════
+  Foundation Setup
+════════════════════════════════════════
+
+🖥️  Setting hostname to LE-PROD-VPS...
+   ✓ Hostname set; Tailscale will use it for MagicDNS (tailscale ssh deploy@LE-PROD-VPS)
+
+📦 Updating system packages...
+⏳ Waiting for apt lock... done.
+Hit:1 https://repository.monarx.com/repository/ubuntu-noble noble InRelease
+Hit:2 http://archive.ubuntu.com/ubuntu noble InRelease
+Hit:3 http://security.ubuntu.com/ubuntu noble-security InRelease
+Hit:4 http://archive.ubuntu.com/ubuntu noble-updates InRelease
+Hit:5 http://archive.ubuntu.com/ubuntu noble-backports InRelease
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+17 packages can be upgraded. Run 'apt list --upgradable' to see them.
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+Calculating upgrade... Done
+The following NEW packages will be installed:
+  linux-headers-6.8.0-101 linux-headers-6.8.0-101-generic linux-image-6.8.0-101-generic linux-modules-6.8.0-101-generic
+  linux-tools-6.8.0-101 linux-tools-6.8.0-101-generic
+The following packages have been kept back:
+  cloud-init
+The following packages will be upgraded:
+  gcc-14-base libexpat1 libgcc-s1 libgnutls30t64 libpng16-16t64 libssh-4 libstdc++6 linux-headers-generic linux-headers-virtual
+  linux-image-virtual linux-libc-dev linux-tools-common linux-virtual python3-software-properties software-properties-common
+  systemd-hwe-hwdb
+16 upgraded, 6 newly installed, 0 to remove and 1 not upgraded.
+13 standard LTS security updates
+Need to get 83.7 MB of archives.
+After this operation, 190 MB of additional disk space will be used.
+Get:1 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 gcc-14-base amd64 14.2.0-4ubuntu2~24.04.1 [51.0 kB]
+Get:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libstdc++6 amd64 14.2.0-4ubuntu2~24.04.1 [792 kB]
+Get:3 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libgcc-s1 amd64 14.2.0-4ubuntu2~24.04.1 [78.4 kB]
+Get:4 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libgnutls30t64 amd64 3.8.3-1.1ubuntu3.5 [1001 kB]
+Get:5 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libexpat1 amd64 2.6.1-2ubuntu0.4 [88.2 kB]
+Get:6 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 systemd-hwe-hwdb all 255.1.7 [3716 B]
+Get:7 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libpng16-16t64 amd64 1.6.43-5ubuntu0.5 [188 kB]
+Get:8 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libssh-4 amd64 0.10.6-2ubuntu0.3 [190 kB]
+Get:9 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-headers-6.8.0-101 all 6.8.0-101.101 [14.1 MB]
+Get:10 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-headers-6.8.0-101-generic amd64 6.8.0-101.101 [4287 kB]
+Get:11 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-modules-6.8.0-101-generic amd64 6.8.0-101.101 [39.6 MB]
+Get:12 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-image-6.8.0-101-generic amd64 6.8.0-101.101 [14.8 MB]
+Get:13 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-virtual amd64 6.8.0-101.101 [1700 B]
+Get:14 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-image-virtual amd64 6.8.0-101.101 [11.1 kB]
+Get:15 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-headers-virtual amd64 6.8.0-101.101 [1648 B]
+Get:16 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-headers-generic amd64 6.8.0-101.101 [11.0 kB]
+Get:17 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-libc-dev amd64 6.8.0-101.101 [2042 kB]
+Get:18 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-tools-common all 6.8.0-101.101 [881 kB]
+Get:19 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-tools-6.8.0-101 amd64 6.8.0-101.101 [5541 kB]
+Get:20 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-tools-6.8.0-101-generic amd64 6.8.0-101.101 [1818 B]
+Get:21 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 software-properties-common all 0.99.49.4 [14.4 kB]
+Get:22 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 python3-software-properties all 0.99.49.4 [30.0 kB]
+Fetched 83.7 MB in 12s (7202 kB/s)
+(Reading database ... 106563 files and directories currently installed.)
+Preparing to unpack .../gcc-14-base_14.2.0-4ubuntu2~24.04.1_amd64.deb ...
+Unpacking gcc-14-base:amd64 (14.2.0-4ubuntu2~24.04.1) over (14.2.0-4ubuntu2~24.04) ...
+Setting up gcc-14-base:amd64 (14.2.0-4ubuntu2~24.04.1) ...
+(Reading database ... 106563 files and directories currently installed.)
+Preparing to unpack .../libstdc++6_14.2.0-4ubuntu2~24.04.1_amd64.deb ...
+Unpacking libstdc++6:amd64 (14.2.0-4ubuntu2~24.04.1) over (14.2.0-4ubuntu2~24.04) ...
+Setting up libstdc++6:amd64 (14.2.0-4ubuntu2~24.04.1) ...
+(Reading database ... 106563 files and directories currently installed.)
+Preparing to unpack .../libgcc-s1_14.2.0-4ubuntu2~24.04.1_amd64.deb ...
+Unpacking libgcc-s1:amd64 (14.2.0-4ubuntu2~24.04.1) over (14.2.0-4ubuntu2~24.04) ...
+Setting up libgcc-s1:amd64 (14.2.0-4ubuntu2~24.04.1) ...
+(Reading database ... 106563 files and directories currently installed.)
+Preparing to unpack .../libgnutls30t64_3.8.3-1.1ubuntu3.5_amd64.deb ...
+Unpacking libgnutls30t64:amd64 (3.8.3-1.1ubuntu3.5) over (3.8.3-1.1ubuntu3.4) ...
+Setting up libgnutls30t64:amd64 (3.8.3-1.1ubuntu3.5) ...
+(Reading database ... 106563 files and directories currently installed.)
+Preparing to unpack .../00-libexpat1_2.6.1-2ubuntu0.4_amd64.deb ...
+Unpacking libexpat1:amd64 (2.6.1-2ubuntu0.4) over (2.6.1-2ubuntu0.3) ...
+Preparing to unpack .../01-systemd-hwe-hwdb_255.1.7_all.deb ...
+Unpacking systemd-hwe-hwdb (255.1.7) over (255.1.6) ...
+Preparing to unpack .../02-libpng16-16t64_1.6.43-5ubuntu0.5_amd64.deb ...
+Unpacking libpng16-16t64:amd64 (1.6.43-5ubuntu0.5) over (1.6.43-5ubuntu0.4) ...
+Preparing to unpack .../03-libssh-4_0.10.6-2ubuntu0.3_amd64.deb ...
+Unpacking libssh-4:amd64 (0.10.6-2ubuntu0.3) over (0.10.6-2ubuntu0.2) ...
+Selecting previously unselected package linux-headers-6.8.0-101.
+Preparing to unpack .../04-linux-headers-6.8.0-101_6.8.0-101.101_all.deb ...
+Unpacking linux-headers-6.8.0-101 (6.8.0-101.101) ...
+Selecting previously unselected package linux-headers-6.8.0-101-generic.
+Preparing to unpack .../05-linux-headers-6.8.0-101-generic_6.8.0-101.101_amd64.deb ...
+Unpacking linux-headers-6.8.0-101-generic (6.8.0-101.101) ...
+Selecting previously unselected package linux-modules-6.8.0-101-generic.
+Preparing to unpack .../06-linux-modules-6.8.0-101-generic_6.8.0-101.101_amd64.deb ...
+Unpacking linux-modules-6.8.0-101-generic (6.8.0-101.101) ...
+Selecting previously unselected package linux-image-6.8.0-101-generic.
+Preparing to unpack .../07-linux-image-6.8.0-101-generic_6.8.0-101.101_amd64.deb ...
+Unpacking linux-image-6.8.0-101-generic (6.8.0-101.101) ...
+Preparing to unpack .../08-linux-virtual_6.8.0-101.101_amd64.deb ...
+Unpacking linux-virtual (6.8.0-101.101) over (6.8.0-100.100) ...
+Preparing to unpack .../09-linux-image-virtual_6.8.0-101.101_amd64.deb ...
+Unpacking linux-image-virtual (6.8.0-101.101) over (6.8.0-100.100) ...
+Preparing to unpack .../10-linux-headers-virtual_6.8.0-101.101_amd64.deb ...
+Unpacking linux-headers-virtual (6.8.0-101.101) over (6.8.0-100.100) ...
+Preparing to unpack .../11-linux-headers-generic_6.8.0-101.101_amd64.deb ...
+Unpacking linux-headers-generic (6.8.0-101.101) over (6.8.0-100.100) ...
+Preparing to unpack .../12-linux-libc-dev_6.8.0-101.101_amd64.deb ...
+Unpacking linux-libc-dev:amd64 (6.8.0-101.101) over (6.8.0-100.100) ...
+Preparing to unpack .../13-linux-tools-common_6.8.0-101.101_all.deb ...
+Unpacking linux-tools-common (6.8.0-101.101) over (6.8.0-100.100) ...
+Selecting previously unselected package linux-tools-6.8.0-101.
+Preparing to unpack .../14-linux-tools-6.8.0-101_6.8.0-101.101_amd64.deb ...
+Unpacking linux-tools-6.8.0-101 (6.8.0-101.101) ...
+Selecting previously unselected package linux-tools-6.8.0-101-generic.
+Preparing to unpack .../15-linux-tools-6.8.0-101-generic_6.8.0-101.101_amd64.deb ...
+Unpacking linux-tools-6.8.0-101-generic (6.8.0-101.101) ...
+Preparing to unpack .../16-software-properties-common_0.99.49.4_all.deb ...
+Unpacking software-properties-common (0.99.49.4) over (0.99.49.3) ...
+Preparing to unpack .../17-python3-software-properties_0.99.49.4_all.deb ...
+Unpacking python3-software-properties (0.99.49.4) over (0.99.49.3) ...
+Setting up libexpat1:amd64 (2.6.1-2ubuntu0.4) ...
+Setting up linux-headers-6.8.0-101 (6.8.0-101.101) ...
+Setting up linux-libc-dev:amd64 (6.8.0-101.101) ...
+Setting up python3-software-properties (0.99.49.4) ...
+Setting up linux-modules-6.8.0-101-generic (6.8.0-101.101) ...
+Setting up libpng16-16t64:amd64 (1.6.43-5ubuntu0.5) ...
+Setting up linux-headers-6.8.0-101-generic (6.8.0-101.101) ...
+Setting up libssh-4:amd64 (0.10.6-2ubuntu0.3) ...
+Setting up systemd-hwe-hwdb (255.1.7) ...
+Setting up linux-tools-common (6.8.0-101.101) ...
+Setting up linux-headers-generic (6.8.0-101.101) ...
+Setting up software-properties-common (0.99.49.4) ...
+Setting up linux-image-6.8.0-101-generic (6.8.0-101.101) ...
+I: /boot/vmlinuz.old is now a symlink to vmlinuz-6.8.0-100-generic
+I: /boot/initrd.img.old is now a symlink to initrd.img-6.8.0-100-generic
+I: /boot/vmlinuz is now a symlink to vmlinuz-6.8.0-101-generic
+I: /boot/initrd.img is now a symlink to initrd.img-6.8.0-101-generic
+Setting up linux-tools-6.8.0-101 (6.8.0-101.101) ...
+Setting up linux-image-virtual (6.8.0-101.101) ...
+Setting up linux-tools-6.8.0-101-generic (6.8.0-101.101) ...
+Setting up linux-headers-virtual (6.8.0-101.101) ...
+Setting up linux-virtual (6.8.0-101.101) ...
+Processing triggers for udev (255.4-1ubuntu8.12) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+Processing triggers for dbus (1.14.10-4ubuntu4.1) ...
+Processing triggers for linux-image-6.8.0-101-generic (6.8.0-101.101) ...
+/etc/kernel/postinst.d/initramfs-tools:
+update-initramfs: Generating /boot/initrd.img-6.8.0-101-generic
+/etc/kernel/postinst.d/zz-update-grub:
+Sourcing file `/etc/default/grub'
+Sourcing file `/etc/default/grub.d/50-cloudimg-settings.cfg'
+Generating grub configuration file ...
+Found linux image: /boot/vmlinuz-6.8.0-101-generic
+Found initrd image: /boot/initrd.img-6.8.0-101-generic
+Found linux image: /boot/vmlinuz-6.8.0-100-generic
+Found initrd image: /boot/initrd.img-6.8.0-100-generic
+Found linux image: /boot/vmlinuz-6.8.0-94-generic
+Found initrd image: /boot/initrd.img-6.8.0-94-generic
+Warning: os-prober will not be executed to detect other bootable partitions.
+Systems on them will not be added to the GRUB boot configuration.
+Check GRUB_DISABLE_OS_PROBER documentation entry.
+Adding boot menu entry for UEFI Firmware Settings ...
+done
+Scanning processes...
+Scanning candidates...
+Scanning linux images...
+
+Pending kernel upgrade!
+Running kernel version:
+  6.8.0-100-generic
+Diagnostics:
+  The currently running kernel version is not the expected kernel version 6.8.0-101-generic.
+
+Restarting the system to load the new kernel will not be handled automatically, so you should consider rebooting.
+
+Restarting services...
+ systemctl restart multipathd.service packagekit.service polkit.service
+
+Service restarts being deferred:
+ /etc/needrestart/restart.d/dbus.service
+ systemctl restart unattended-upgrades.service
+
+No containers need to be restarted.
+
+User sessions running outdated binaries:
+ root @ session #1: apt[2463], bash[2126]
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+📦 Installing essential packages...
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+git is already the newest version (1:2.43.0-1ubuntu7.3).
+curl is already the newest version (8.5.0-2ubuntu10.7).
+wget is already the newest version (1.21.4-1ubuntu4.1).
+ufw is already the newest version (0.36.2-6).
+ufw set to manually installed.
+htop is already the newest version (3.3.0-4build1).
+htop set to manually installed.
+unattended-upgrades is already the newest version (2.9.1+nmu4ubuntu1).
+unattended-upgrades set to manually installed.
+ca-certificates is already the newest version (20240203).
+ca-certificates set to manually installed.
+software-properties-common is already the newest version (0.99.49.4).
+software-properties-common set to manually installed.
+gnupg is already the newest version (2.4.4-2ubuntu17.4).
+lsb-release is already the newest version (12.0-2).
+lsb-release set to manually installed.
+The following packages were automatically installed and are no longer required:
+  linux-headers-6.8.0-94 linux-headers-6.8.0-94-generic linux-image-6.8.0-94-generic linux-modules-6.8.0-94-generic
+  linux-tools-6.8.0-94 linux-tools-6.8.0-94-generic
+Use 'sudo apt autoremove' to remove them.
+The following NEW packages will be installed:
+  apt-transport-https ncdu rclone
+0 upgraded, 3 newly installed, 0 to remove and 1 not upgraded.
+Need to get 16.5 MB of archives.
+After this operation, 62.8 MB of additional disk space will be used.
+Get:1 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 apt-transport-https all 2.8.3 [3970 B]
+Get:2 http://archive.ubuntu.com/ubuntu noble/universe amd64 ncdu amd64 1.19-0.1 [50.7 kB]
+Get:3 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 rclone amd64 1.60.1+dfsg-3ubuntu0.24.04.4 [16.5 MB]
+Fetched 16.5 MB in 5s (3403 kB/s)
+Selecting previously unselected package apt-transport-https.
+(Reading database ... 138178 files and directories currently installed.)
+Preparing to unpack .../apt-transport-https_2.8.3_all.deb ...
+Unpacking apt-transport-https (2.8.3) ...
+Selecting previously unselected package ncdu.
+Preparing to unpack .../ncdu_1.19-0.1_amd64.deb ...
+Unpacking ncdu (1.19-0.1) ...
+Selecting previously unselected package rclone.
+Preparing to unpack .../rclone_1.60.1+dfsg-3ubuntu0.24.04.4_amd64.deb ...
+Unpacking rclone (1.60.1+dfsg-3ubuntu0.24.04.4) ...
+Setting up ncdu (1.19-0.1) ...
+Setting up apt-transport-https (2.8.3) ...
+Setting up rclone (1.60.1+dfsg-3ubuntu0.24.04.4) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+Scanning processes...
+Scanning candidates...
+Scanning linux images...
+
+Pending kernel upgrade!
+Running kernel version:
+  6.8.0-100-generic
+Diagnostics:
+  The currently running kernel version is not the expected kernel version 6.8.0-101-generic.
+
+Restarting the system to load the new kernel will not be handled automatically, so you should consider rebooting.
+
+Restarting services...
+
+Service restarts being deferred:
+ /etc/needrestart/restart.d/dbus.service
+ systemctl restart unattended-upgrades.service
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+🐳 Adding Docker CE repository...
+⏳ Waiting for apt lock... done.
+Get:1 https://download.docker.com/linux/ubuntu noble InRelease [48.5 kB]
+Get:2 https://download.docker.com/linux/ubuntu noble/stable amd64 Packages [46.1 kB]
+Hit:3 https://repository.monarx.com/repository/ubuntu-noble noble InRelease
+Hit:4 http://archive.ubuntu.com/ubuntu noble InRelease
+Hit:5 http://archive.ubuntu.com/ubuntu noble-updates InRelease
+Hit:6 http://security.ubuntu.com/ubuntu noble-security InRelease
+Hit:7 http://archive.ubuntu.com/ubuntu noble-backports InRelease
+Fetched 94.6 kB in 1s (76.4 kB/s)
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+1 package can be upgraded. Run 'apt list --upgradable' to see it.
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following packages were automatically installed and are no longer required:
+  linux-headers-6.8.0-94 linux-headers-6.8.0-94-generic linux-image-6.8.0-94-generic linux-modules-6.8.0-94-generic
+  linux-tools-6.8.0-94 linux-tools-6.8.0-94-generic
+Use 'sudo apt autoremove' to remove them.
+The following additional packages will be installed:
+  docker-ce-rootless-extras libslirp0 pigz slirp4netns
+Suggested packages:
+  cgroupfs-mount | cgroup-lite docker-model-plugin
+The following NEW packages will be installed:
+  containerd.io docker-buildx-plugin docker-ce docker-ce-cli docker-ce-rootless-extras docker-compose-plugin libslirp0 pigz
+  slirp4netns
+0 upgraded, 9 newly installed, 0 to remove and 1 not upgraded.
+Need to get 96.8 MB of archives.
+After this operation, 392 MB of additional disk space will be used.
+Get:1 https://download.docker.com/linux/ubuntu noble/stable amd64 containerd.io amd64 2.2.1-1~ubuntu.24.04~noble [23.4 MB]
+Get:2 https://download.docker.com/linux/ubuntu noble/stable amd64 docker-ce-cli amd64 5:29.2.1-1~ubuntu.24.04~noble [16.3 MB]
+Get:3 https://download.docker.com/linux/ubuntu noble/stable amd64 docker-ce amd64 5:29.2.1-1~ubuntu.24.04~noble [22.5 MB]
+Get:4 http://archive.ubuntu.com/ubuntu noble/universe amd64 pigz amd64 2.8-1 [65.6 kB]
+Get:5 https://download.docker.com/linux/ubuntu noble/stable amd64 docker-buildx-plugin amd64 0.31.1-1~ubuntu.24.04~noble [20.3 MB]
+Get:6 https://download.docker.com/linux/ubuntu noble/stable amd64 docker-ce-rootless-extras amd64 5:29.2.1-1~ubuntu.24.04~noble [6387 kB]
+Get:7 https://download.docker.com/linux/ubuntu noble/stable amd64 docker-compose-plugin amd64 5.1.0-1~ubuntu.24.04~noble [7847 kB]
+Get:8 http://archive.ubuntu.com/ubuntu noble/main amd64 libslirp0 amd64 4.7.0-1ubuntu3 [63.8 kB]
+Get:9 http://archive.ubuntu.com/ubuntu noble/universe amd64 slirp4netns amd64 1.2.1-1build2 [34.9 kB]
+Fetched 96.8 MB in 2s (50.6 MB/s)
+Selecting previously unselected package containerd.io.
+(Reading database ... 138198 files and directories currently installed.)
+Preparing to unpack .../0-containerd.io_2.2.1-1~ubuntu.24.04~noble_amd64.deb ...
+Unpacking containerd.io (2.2.1-1~ubuntu.24.04~noble) ...
+Selecting previously unselected package docker-ce-cli.
+Preparing to unpack .../1-docker-ce-cli_5%3a29.2.1-1~ubuntu.24.04~noble_amd64.deb ...
+Unpacking docker-ce-cli (5:29.2.1-1~ubuntu.24.04~noble) ...
+Selecting previously unselected package docker-ce.
+Preparing to unpack .../2-docker-ce_5%3a29.2.1-1~ubuntu.24.04~noble_amd64.deb ...
+Unpacking docker-ce (5:29.2.1-1~ubuntu.24.04~noble) ...
+Selecting previously unselected package pigz.
+Preparing to unpack .../3-pigz_2.8-1_amd64.deb ...
+Unpacking pigz (2.8-1) ...
+Selecting previously unselected package docker-buildx-plugin.
+Preparing to unpack .../4-docker-buildx-plugin_0.31.1-1~ubuntu.24.04~noble_amd64.deb ...
+Unpacking docker-buildx-plugin (0.31.1-1~ubuntu.24.04~noble) ...
+Selecting previously unselected package docker-ce-rootless-extras.
+Preparing to unpack .../5-docker-ce-rootless-extras_5%3a29.2.1-1~ubuntu.24.04~noble_amd64.deb ...
+Unpacking docker-ce-rootless-extras (5:29.2.1-1~ubuntu.24.04~noble) ...
+Selecting previously unselected package docker-compose-plugin.
+Preparing to unpack .../6-docker-compose-plugin_5.1.0-1~ubuntu.24.04~noble_amd64.deb ...
+Unpacking docker-compose-plugin (5.1.0-1~ubuntu.24.04~noble) ...
+Selecting previously unselected package libslirp0:amd64.
+Preparing to unpack .../7-libslirp0_4.7.0-1ubuntu3_amd64.deb ...
+Unpacking libslirp0:amd64 (4.7.0-1ubuntu3) ...
+Selecting previously unselected package slirp4netns.
+Preparing to unpack .../8-slirp4netns_1.2.1-1build2_amd64.deb ...
+Unpacking slirp4netns (1.2.1-1build2) ...
+Setting up docker-buildx-plugin (0.31.1-1~ubuntu.24.04~noble) ...
+Setting up containerd.io (2.2.1-1~ubuntu.24.04~noble) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/containerd.service → /usr/lib/systemd/system/containerd.service.
+Setting up docker-compose-plugin (5.1.0-1~ubuntu.24.04~noble) ...
+Setting up docker-ce-cli (5:29.2.1-1~ubuntu.24.04~noble) ...
+Setting up libslirp0:amd64 (4.7.0-1ubuntu3) ...
+Setting up pigz (2.8-1) ...
+Setting up docker-ce-rootless-extras (5:29.2.1-1~ubuntu.24.04~noble) ...
+Setting up slirp4netns (1.2.1-1build2) ...
+Setting up docker-ce (5:29.2.1-1~ubuntu.24.04~noble) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/docker.service → /usr/lib/systemd/system/docker.service.
+Created symlink /etc/systemd/system/sockets.target.wants/docker.socket → /usr/lib/systemd/system/docker.socket.
+Processing triggers for man-db (2.12.0-4build2) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+Scanning processes...
+Scanning candidates...
+Scanning linux images...
+
+Pending kernel upgrade!
+Running kernel version:
+  6.8.0-100-generic
+Diagnostics:
+  The currently running kernel version is not the expected kernel version 6.8.0-101-generic.
+
+Restarting the system to load the new kernel will not be handled automatically, so you should consider rebooting.
+
+Restarting services...
+
+Service restarts being deferred:
+ /etc/needrestart/restart.d/dbus.service
+ systemctl restart unattended-upgrades.service
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+🐳 Enabling Docker...
+Synchronizing state of docker.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
+Executing: /usr/lib/systemd/systemd-sysv-install enable docker
+✅ Docker installed and running
+✅ Deploy user already exists
+🔐 Installing Bitwarden CLI (bw)...
+   ⚠  snap install bw failed — install manually: snap install bw
+🔐 Installing Bitwarden Secrets Manager CLI (bws)...
+   ✓ bws already installed (bws 2.0.0)
+   ✓ Deploy password loaded from bootstrap.env
+   ✓ Password set for deploy user (sudo access)
+/etc/sudoers.d/deploy: parsed OK
+   ✓ Scoped sudoers configured (deploy cannot run arbitrary root — see docs/OPERATIONS.md)
+   Copied SSH keys from root (optional fallback)
+🌐 Creating Docker network for apps...
+0418c9947f4d524e4fb15bf0ff947e4ec023402d69f0eda6510396cd9f315f20
+🔒 Enabling automatic security updates...
+Synchronizing state of unattended-upgrades.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
+Executing: /usr/lib/systemd/systemd-sysv-install enable unattended-upgrades
+🕐 Setting timezone to Asia/Kolkata...
+🔐 Hardening SSH configuration (Tailscale SSH is primary access)...
+   ✓ SSH hardened (drop-in: /etc/ssh/sshd_config.d/99-tailscale-hardened.conf)
+   ✓ Tailscale SSH is primary access — sshd is defence-in-depth only
+
+✅ Foundation setup complete
+
+📊 Installed:
+   ✓ Docker & Docker Compose
+   ✓ Git, curl, wget
+   ✓ UFW firewall (not configured yet)
+   ✓ Automatic security updates
+   ✓ Deploy user (with docker access)
+   ✓ Docker network: caddy-net
+
+
+
+════════════════════════════════════════
+  Tailscale: Install, Auth, Enable SSH
+════════════════════════════════════════
+
+
+📦 Installing Tailscale...
+⏳ Waiting for apt lock... done.
+Installing Tailscale for ubuntu noble, using method apt
++ mkdir -p --mode=0755 /usr/share/keyrings
++ + curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg
+tee /usr/share/keyrings/tailscale-archive-keyring.gpg
++ chmod 0644 /usr/share/keyrings/tailscale-archive-keyring.gpg
++ curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list
++ tee /etc/apt/sources.list.d/tailscale.list
+# Tailscale packages for ubuntu noble
+deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/ubuntu noble main
++ chmod 0644 /etc/apt/sources.list.d/tailscale.list
++ apt-get update
+Hit:1 https://download.docker.com/linux/ubuntu noble InRelease
+Hit:2 https://repository.monarx.com/repository/ubuntu-noble noble InRelease
+Hit:3 http://security.ubuntu.com/ubuntu noble-security InRelease
+Hit:4 http://archive.ubuntu.com/ubuntu noble InRelease
+Hit:5 http://archive.ubuntu.com/ubuntu noble-updates InRelease
+Hit:6 http://archive.ubuntu.com/ubuntu noble-backports InRelease
+Get:7 https://pkgs.tailscale.com/stable/ubuntu noble InRelease
+Get:8 https://pkgs.tailscale.com/stable/ubuntu noble/main amd64 Packages [14.6 kB]
+Get:9 https://pkgs.tailscale.com/stable/ubuntu noble/main all Packages [354 B]
+Fetched 21.5 kB in 2s (9803 B/s)
+Reading package lists... Done
++ [ -n  ]
++ apt-get install -y tailscale tailscale-archive-keyring
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following NEW packages will be installed:
+  tailscale tailscale-archive-keyring
+0 upgraded, 2 newly installed, 0 to remove and 1 not upgraded.
+Need to get 35.5 MB of archives.
+After this operation, 69.9 MB of additional disk space will be used.
+Get:2 https://pkgs.tailscale.com/stable/ubuntu noble/main all tailscale-archive-keyring all 1.35.181 [3082 B]
+Get:1 https://pkgs.tailscale.com/stable/ubuntu noble/main amd64 tailscale amd64 1.94.2 [35.5 MB]
+Fetched 35.5 MB in 3s (11.7 MB/s)
+Selecting previously unselected package tailscale.
+(Reading database ... 106851 files and directories currently installed.)
+Preparing to unpack .../tailscale_1.94.2_amd64.deb ...
+Unpacking tailscale (1.94.2) ...
+Selecting previously unselected package tailscale-archive-keyring.
+Preparing to unpack .../tailscale-archive-keyring_1.35.181_all.deb ...
+Unpacking tailscale-archive-keyring (1.35.181) ...
+Setting up tailscale-archive-keyring (1.35.181) ...
+Setting up tailscale (1.94.2) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/tailscaled.service → /usr/lib/systemd/system/tailscaled.service.
+Scanning processes...
+Scanning candidates...
+Scanning linux images...
+
+Pending kernel upgrade!
+Running kernel version:
+  6.8.0-100-generic
+Diagnostics:
+  The currently running kernel version is not the expected kernel version 6.8.0-101-generic.
+
+Restarting the system to load the new kernel will not be handled automatically, so you should consider rebooting.
+
+Restarting services...
+
+Service restarts being deferred:
+ /etc/needrestart/restart.d/dbus.service
+ systemctl restart unattended-upgrades.service
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
++ [ false = true ]
++ set +x
+Installation complete! Log in to start using Tailscale by running:
+
+tailscale up
+
+🔐 Authenticate this VPS into your tailnet and enable Tailscale SSH...
+
+  ✓ Using Tailscale auth key (no browser needed)
+
+✅ Tailscale authenticated via auth key and Tailscale SSH enabled
+
+🔍 Verifying Tailscale SSH is enabled...
+   ⚠️  Tailscale SSH not detected as enabled, attempting to enable...
+
+📊 Tailscale Information:
+   Tailscale IP: 100.126.160.53
+   Hostname: LE-PROD-VPS
+
+🔐 Deploy SSH access (use this after Phase 1 exits):
+   tailscale ssh deploy@LE-PROD-VPS
+   or
+   tailscale ssh deploy@100.126.160.53
+
+⚠️  Public SSH (port 22) will be blocked by firewall.
+   Use Tailscale SSH only after setup is complete.
+
+💡 Install Tailscale on your local machine: https://tailscale.com/download
+
+╔══════════════════════════════════════════════════════════╗
+║  ACL Policy — Recommended Next Step                     ║
+╠══════════════════════════════════════════════════════════╣
+║  Apply the reference ACL in Tailscale Admin Console to  ║
+║  restrict SSH to YOUR identity only:                    ║
+║    https://login.tailscale.com/admin/acls               ║
+║  Reference policy: /opt/infra/var/tailscale-acl.hujson.example
+╚══════════════════════════════════════════════════════════╝
+
+  Auth key for rebuilds: generate at Tailscale Admin
+  → Settings → Auth keys → New key
+  → Set: Reusable ✓  Ephemeral ✗  Tags: tag:server
+  → Store in BSM as key TAILSCALE_KEY
+
+
+════════════════════════════════════════
+  Verify deploy user & Tailscale SSH access
+════════════════════════════════════════
+
+✅ Deploy user exists and has valid login path
+✅ Tailscale SSH enabled; deploy login path: tailscale ssh deploy@LE-PROD-VPS
+
+
+════════════════════════════════════════
+  GitHub Access Setup
+════════════════════════════════════════
+
+  Supported methods:
+  [PAT]  GitHub Personal Access Token — ★ recommended for multiple repos
+  [SSH]  Deploy key (ed25519)         — good for single repo or strict isolation
+
+🔐 GITHUB_PAT found in environment — configuring git access...
+   ✓ Git credential store configured (/home/deploy/.git-credentials, chmod 600)
+   ✓ URL rewrite: git@github.com: → https://github.com/
+   ✓ All repos accessible with this one PAT (no per-repo setup needed)
+
+🔍 Verifying GitHub PAT access...
+
+✅ GitHub PAT access VERIFIED (can reach github.com via HTTPS)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  GitHub access configured [pat]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Clone repos from the VPS:
+    git clone https://github.com/ORG/REPO.git  (HTTPS)
+    git clone git@github.com:ORG/REPO.git      (SSH URL — auto-converted via URL rewrite)
+
+  Full guide: /opt/infra/docs/OPERATIONS.md § GitHub access
+
+
+════════════════════════════════════════
+  Firewall Configuration
+════════════════════════════════════════
+
+🔥 Configuring UFW firewall (inbound + outbound)...
+   Fetching Cloudflare IP ranges...
+   Resetting to defaults...
+Backing up 'user.rules' to '/etc/ufw/user.rules.20260302_152849'
+Backing up 'before.rules' to '/etc/ufw/before.rules.20260302_152849'
+Backing up 'after.rules' to '/etc/ufw/after.rules.20260302_152849'
+Backing up 'user6.rules' to '/etc/ufw/user6.rules.20260302_152849'
+Backing up 'before6.rules' to '/etc/ufw/before6.rules.20260302_152849'
+Backing up 'after6.rules' to '/etc/ufw/after6.rules.20260302_152849'
+
+Default incoming policy changed to 'deny'
+(be sure to update your rules accordingly)
+Default outgoing policy changed to 'deny'
+(be sure to update your rules accordingly)
+Rules updated
+Rules updated (v6)
+Rules updated
+Rules updated (v6)
+   Allowing 80, 443 from Cloudflare only...
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated (v6)
+Rules updated
+Rules updated (v6)
+   ✅ Tailscale detected — blocking public SSH port 22
+Rules updated
+Rules updated (v6)
+Rules updated
+Rules updated (v6)
+Rules updated
+Rules updated (v6)
+Rules updated
+Rules updated (v6)
+Rules updated
+Rules updated (v6)
+Rules updated
+Rules updated (v6)
+Rules updated
+Rules updated (v6)
+Rules updated
+Rules updated (v6)
+Rules updated
+Rules updated (v6)
+Rules updated
+Rules updated (v6)
+   Enabling firewall...
+Firewall is active and enabled on system startup
+
+✅ Firewall configured successfully
+
+📋 Current firewall rules:
+Status: active
+
+     To                         Action      From
+     --                         ------      ----
+[ 1] Anywhere on lo             ALLOW IN    Anywhere                   # Loopback
+[ 2] Anywhere on tailscale0     ALLOW IN    Anywhere                   # Tailscale network
+[ 3] 80/tcp                     ALLOW IN    173.245.48.0/20            # HTTP (Cloudflare)
+[ 4] 443/tcp                    ALLOW IN    173.245.48.0/20            # HTTPS (Cloudflare)
+[ 5] 443/udp                    ALLOW IN    173.245.48.0/20            # HTTP/3 (Cloudflare)
+[ 6] 80/tcp                     ALLOW IN    103.21.244.0/22            # HTTP (Cloudflare)
+[ 7] 443/tcp                    ALLOW IN    103.21.244.0/22            # HTTPS (Cloudflare)
+[ 8] 443/udp                    ALLOW IN    103.21.244.0/22            # HTTP/3 (Cloudflare)
+[ 9] 80/tcp                     ALLOW IN    103.22.200.0/22            # HTTP (Cloudflare)
+[10] 443/tcp                    ALLOW IN    103.22.200.0/22            # HTTPS (Cloudflare)
+[11] 443/udp                    ALLOW IN    103.22.200.0/22            # HTTP/3 (Cloudflare)
+[12] 80/tcp                     ALLOW IN    103.31.4.0/22              # HTTP (Cloudflare)
+[13] 443/tcp                    ALLOW IN    103.31.4.0/22              # HTTPS (Cloudflare)
+[14] 443/udp                    ALLOW IN    103.31.4.0/22              # HTTP/3 (Cloudflare)
+[15] 80/tcp                     ALLOW IN    141.101.64.0/18            # HTTP (Cloudflare)
+[16] 443/tcp                    ALLOW IN    141.101.64.0/18            # HTTPS (Cloudflare)
+[17] 443/udp                    ALLOW IN    141.101.64.0/18            # HTTP/3 (Cloudflare)
+[18] 80/tcp                     ALLOW IN    108.162.192.0/18           # HTTP (Cloudflare)
+[19] 443/tcp                    ALLOW IN    108.162.192.0/18           # HTTPS (Cloudflare)
+[20] 443/udp                    ALLOW IN    108.162.192.0/18           # HTTP/3 (Cloudflare)
+[21] 80/tcp                     ALLOW IN    190.93.240.0/20            # HTTP (Cloudflare)
+[22] 443/tcp                    ALLOW IN    190.93.240.0/20            # HTTPS (Cloudflare)
+[23] 443/udp                    ALLOW IN    190.93.240.0/20            # HTTP/3 (Cloudflare)
+[24] 80/tcp                     ALLOW IN    188.114.96.0/20            # HTTP (Cloudflare)
+[25] 443/tcp                    ALLOW IN    188.114.96.0/20            # HTTPS (Cloudflare)
+[26] 443/udp                    ALLOW IN    188.114.96.0/20            # HTTP/3 (Cloudflare)
+[27] 80/tcp                     ALLOW IN    197.234.240.0/22           # HTTP (Cloudflare)
+[28] 443/tcp                    ALLOW IN    197.234.240.0/22           # HTTPS (Cloudflare)
+[29] 443/udp                    ALLOW IN    197.234.240.0/22           # HTTP/3 (Cloudflare)
+[30] 80/tcp                     ALLOW IN    198.41.128.0/17            # HTTP (Cloudflare)
+[31] 443/tcp                    ALLOW IN    198.41.128.0/17            # HTTPS (Cloudflare)
+[32] 443/udp                    ALLOW IN    198.41.128.0/17            # HTTP/3 (Cloudflare)
+[33] 80/tcp                     ALLOW IN    162.158.0.0/15             # HTTP (Cloudflare)
+[34] 443/tcp                    ALLOW IN    162.158.0.0/15             # HTTPS (Cloudflare)
+[35] 443/udp                    ALLOW IN    162.158.0.0/15             # HTTP/3 (Cloudflare)
+[36] 80/tcp                     ALLOW IN    104.16.0.0/13              # HTTP (Cloudflare)
+[37] 443/tcp                    ALLOW IN    104.16.0.0/13              # HTTPS (Cloudflare)
+[38] 443/udp                    ALLOW IN    104.16.0.0/13              # HTTP/3 (Cloudflare)
+[39] 80/tcp                     ALLOW IN    104.24.0.0/14              # HTTP (Cloudflare)
+[40] 443/tcp                    ALLOW IN    104.24.0.0/14              # HTTPS (Cloudflare)
+[41] 443/udp                    ALLOW IN    104.24.0.0/14              # HTTP/3 (Cloudflare)
+[42] 80/tcp                     ALLOW IN    172.64.0.0/13              # HTTP (Cloudflare)
+[43] 443/tcp                    ALLOW IN    172.64.0.0/13              # HTTPS (Cloudflare)
+[44] 443/udp                    ALLOW IN    172.64.0.0/13              # HTTP/3 (Cloudflare)
+[45] 80/tcp                     ALLOW IN    131.0.72.0/22              # HTTP (Cloudflare)
+[46] 443/tcp                    ALLOW IN    131.0.72.0/22              # HTTPS (Cloudflare)
+[47] 443/udp                    ALLOW IN    131.0.72.0/22              # HTTP/3 (Cloudflare)
+[48] 41641/udp                  ALLOW IN    Anywhere                   # Tailscale WireGuard
+[49] 22/tcp                     DENY IN     Anywhere                   # No public SSH - Tailscale only
+[50] Anywhere                   ALLOW OUT   Anywhere on lo             (out) # Loopback
+[51] Anywhere                   ALLOW OUT   Anywhere on tailscale0     (out) # Tailscale network
+[52] 53                         ALLOW OUT   Anywhere                   (out) # DNS
+[53] 123/udp                    ALLOW OUT   Anywhere                   (out) # NTP
+[54] 443/tcp                    ALLOW OUT   Anywhere                   (out) # HTTPS outbound
+[55] 80/tcp                     ALLOW OUT   Anywhere                   (out) # HTTP outbound (apt/ACME)
+[56] 25/tcp                     ALLOW OUT   Anywhere                   (out) # SMTP relay (M365 Exchange connector)
+[57] 41641/udp                  ALLOW OUT   Anywhere                   (out) # Tailscale WireGuard
+[58] 22/tcp                     ALLOW OUT   Anywhere                   (out) # GitHub SSH (git operations)
+[59] Anywhere (v6) on lo        ALLOW IN    Anywhere (v6)              # Loopback
+[60] Anywhere (v6) on tailscale0 ALLOW IN    Anywhere (v6)              # Tailscale network
+[61] 80/tcp                     ALLOW IN    2400:cb00::/32             # HTTP (Cloudflare)
+[62] 443/tcp                    ALLOW IN    2400:cb00::/32             # HTTPS (Cloudflare)
+[63] 443/udp                    ALLOW IN    2400:cb00::/32             # HTTP/3 (Cloudflare)
+[64] 80/tcp                     ALLOW IN    2606:4700::/32             # HTTP (Cloudflare)
+[65] 443/tcp                    ALLOW IN    2606:4700::/32             # HTTPS (Cloudflare)
+[66] 443/udp                    ALLOW IN    2606:4700::/32             # HTTP/3 (Cloudflare)
+[67] 80/tcp                     ALLOW IN    2803:f800::/32             # HTTP (Cloudflare)
+[68] 443/tcp                    ALLOW IN    2803:f800::/32             # HTTPS (Cloudflare)
+[69] 443/udp                    ALLOW IN    2803:f800::/32             # HTTP/3 (Cloudflare)
+[70] 80/tcp                     ALLOW IN    2405:b500::/32             # HTTP (Cloudflare)
+[71] 443/tcp                    ALLOW IN    2405:b500::/32             # HTTPS (Cloudflare)
+[72] 443/udp                    ALLOW IN    2405:b500::/32             # HTTP/3 (Cloudflare)
+[73] 80/tcp                     ALLOW IN    2405:8100::/32             # HTTP (Cloudflare)
+[74] 443/tcp                    ALLOW IN    2405:8100::/32             # HTTPS (Cloudflare)
+[75] 443/udp                    ALLOW IN    2405:8100::/32             # HTTP/3 (Cloudflare)
+[76] 80/tcp                     ALLOW IN    2a06:98c0::/29             # HTTP (Cloudflare)
+[77] 443/tcp                    ALLOW IN    2a06:98c0::/29             # HTTPS (Cloudflare)
+[78] 443/udp                    ALLOW IN    2a06:98c0::/29             # HTTP/3 (Cloudflare)
+[79] 80/tcp                     ALLOW IN    2c0f:f248::/32             # HTTP (Cloudflare)
+[80] 443/tcp                    ALLOW IN    2c0f:f248::/32             # HTTPS (Cloudflare)
+[81] 443/udp                    ALLOW IN    2c0f:f248::/32             # HTTP/3 (Cloudflare)
+[82] 41641/udp (v6)             ALLOW IN    Anywhere (v6)              # Tailscale WireGuard
+[83] 22/tcp (v6)                DENY IN     Anywhere (v6)              # No public SSH - Tailscale only
+[84] Anywhere (v6)              ALLOW OUT   Anywhere (v6) on lo        (out) # Loopback
+[85] Anywhere (v6)              ALLOW OUT   Anywhere (v6) on tailscale0 (out) # Tailscale network
+[86] 53 (v6)                    ALLOW OUT   Anywhere (v6)              (out) # DNS
+[87] 123/udp (v6)               ALLOW OUT   Anywhere (v6)              (out) # NTP
+[88] 443/tcp (v6)               ALLOW OUT   Anywhere (v6)              (out) # HTTPS outbound
+[89] 80/tcp (v6)                ALLOW OUT   Anywhere (v6)              (out) # HTTP outbound (apt/ACME)
+[90] 25/tcp (v6)                ALLOW OUT   Anywhere (v6)              (out) # SMTP relay (M365 Exchange connector)
+[91] 41641/udp (v6)             ALLOW OUT   Anywhere (v6)              (out) # Tailscale WireGuard
+[92] 22/tcp (v6)                ALLOW OUT   Anywhere (v6)              (out) # GitHub SSH (git operations)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Security Summary
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Inbound — BLOCKED except:
+   • 80/tcp, 443/tcp, 443/udp  — Cloudflare IPs only
+   • 41641/udp                 — Tailscale WireGuard
+   • tailscale0 interface      — Internal Tailscale mesh
+   • port 22                   — BLOCKED (Tailscale SSH only)
+
+✅ Outbound — BLOCKED except:
+   • 53 (DNS)                  — name resolution
+   • 123/udp (NTP)             — system clock
+   • 80, 443/tcp               — apt, Docker Hub, GitHub, Bitwarden
+   • 25/tcp (SMTP)             — M365 Exchange relay
+   • 41641/udp (Tailscale)     — mesh tunnel
+   • 22/tcp                    — GitHub SSH (git operations)
+   • tailscale0 interface      — Tailscale internal traffic
+
+🔒 All other inbound and outbound ports are BLOCKED.
+
+   Origin certificate: paste from Bitwarden before or during Phase 2 (import-origin-cert.sh or copy to /opt/infra/caddy/certs/).
+
+╔════════════════════════════════════════════╗
+║          Phase 1 Complete                  ║
+╚════════════════════════════════════════════╝
+
+✅ Root setup is done. Type 'exit' to leave root session.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Next: Log in as deploy via Tailscale SSH
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+From your local machine (with Tailscale installed), run:
+
+   tailscale ssh deploy@LE-PROD-VPS
+
+Then run Phase 2:
+
+   sudo /opt/infra/scripts/bootstrap-phase2.sh
+
+Phase 2 will start Caddy, set up cron, and complete bootstrap.
+After that, all day-to-day operations use the deploy user.
+
+
+Phase 1 complete.
+Phase 1 script complete. Type 'exit' to leave root session.
+
+🔧 Running Phase 2 (Caddy, secrets, apps, cron)...
+
+╔════════════════════════════════════════════╗
+║   VPS Bootstrap Phase 2                    ║
+╚════════════════════════════════════════════╝
+
+Infra-Core Version: 1.3.0
+
+📂 Making scripts executable...
+
+🛠️  Installing global 'infra' CLI wrapper...
+📦 Installing global 'infra' CLI tool...
+✅ Success! The 'infra' CLI is now installed.
+   Try running: infra help
+   ✓ Created /opt/infra/var/infra.conf from example
+   ✓ infra.conf populated from bootstrap.env (PRIMARY_DOMAIN=loansemporium.com)
+🔐 Bitwarden token found — attempting automated secret fetch...
+
+╔══════════════════════════════════════════════════════╗
+║   Fetch Infra Secrets — Bitwarden Secrets Manager   ║
+╚══════════════════════════════════════════════════════╝
+
+  Code    → GitHub         (version-controlled)
+  Secrets → BSM (bws)      (zero prompts)
+  Data    → Cloudflare R2  (backup/restore)
+
+━━ Cloudflare Origin Certificate ━━━━━━━━━━━━━━━━━━━━━
+  ✓ Origin cert  → /opt/infra/caddy/certs/cloudflare-origin.pem
+  ✓ Origin key   → /opt/infra/caddy/certs/cloudflare-origin-key.pem
+
+━━ Cloudflare R2 Credentials ━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓ R2 credentials → /opt/secrets/r2.env
+
+━━ Backup Encryption Key (optional) ━━━━━━━━━━━━━━━━━━
+  ✓ Backup key → /opt/secrets/backup.key (AES-256 encryption enabled)
+
+━━ Bootstrap & Access ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓ Deploy password → /opt/secrets/deploy.password
+🔍 Fetching .env for 'infra' from BSM...
+📝 Writing environment to /opt/secrets/bootstrap.env...
+✅ Environment configured for infra
+  ✓ Bootstrap env configured via JIT helper
+
+━━ Infra Alert Config (Telegram + SMTP) ━━━━━━━━━━━━━━
+/opt/infra/scripts/setup/fetch-secrets.sh: line 197: BSM_ID_SMTP_USER: unbound variable
+🛠️  Choose Phase 2 mode:
+   [1] Fresh Baseline (Clean install, no apps, no data restore)
+   [2] Full Recovery  (Restore apps and data from Cloudflare R2)
+
+   Selection [1]: 1
+   🚀 Mode: FRESH
+
+
+🚀 Step 3/3 — Starting services...
+🔐 Applying SSH configuration (reloading hardening)...
+
+   ✓ Origin certs already in place (from Bitwarden or previous run)
+
+🔒 Protecting runtime Caddyfile from git overwrites...
+   ✓ Caddyfile marked skip-worktree (safe from git reset --hard)
+
+🚀 Caddy reverse proxy...
+WARN[0000] /opt/infra/caddy/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+[+] up 11/11
+ ✔ Image caddy:2-alpine      Pulled                                                                                              6.6s
+ ✔ Volume caddy_caddy_config Created                                                                                             0.0s
+ ✔ Volume caddy_caddy_data   Created                                                                                             0.0s
+ ✔ Container caddy           Started                                                                                             0.4s
+   ✓ Caddy started
+
+🐘 Starting shared Postgres service...
+85946d35d25621f9e289c7e67d7c9333b7b094ff2eab39c4d17f7502530e66b0
+   ⚠️  Postgres files or secrets missing; skipping.
+
+📊 Starting Uptime Kuma monitoring...
+[+] up 17/17
+ ✔ Image louislam/uptime-kuma:1        Pulled                                                                                   13.7s
+ ✔ Volume uptime-kuma_uptime-kuma-data Created                                                                                  0.0s
+ ✔ Container uptime-kuma               Started                                                                                  0.8s
+   ✓ Uptime Kuma started (caddy-net only)
+════════════════════════════════════════
+  Registering App with Caddy
+════════════════════════════════════════
+
+App Name: uptime-kuma
+Domain:   monitor.loansemporium.com
+Port:     3001
+
+💾 Caddyfile backed up to /opt/infra/caddy/Caddyfile.bak.20260302_152940
+📝 Adding to Caddyfile...
+🔍 Validating Caddyfile...
+✓ Caddy restarted
+
+✅ App registered successfully!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Next Steps
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣  Add DNS record in Cloudflare:
+
+   Type: A
+   Name: monitor
+   Content: 147.93.96.215
+   Proxy: ON (orange cloud ☁️)
+
+2️⃣  Ensure your app container is running:
+   cd /opt/apps/uptime-kuma
+   compose ps
+
+3️⃣  Test your app:
+   https://monitor.loansemporium.com
+
+💡 Tip: DNS propagation may take a few minutes
+
+   Registering status page (https://monitor.loansemporium.com/status)...
+   ✓ Health report cron (*/5 * * * *)
+   Adding /status to monitor.loansemporium.com block...
+   ✓ Push endpoint at https://push.loansemporium.com (no auth; set DNS A record, use for Kuma Push URL)
+✓ Caddy restarted
+   ✓ Status at https://monitor.loansemporium.com/status
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Uptime Kuma is live!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   URL: https://monitor.loansemporium.com
+   ⚠ kuma.env not found. Run fetch-secrets.sh first,
+     then create admin at the URL above.
+   Credentials: Bitwarden item 'Uptime Kuma'
+
+   ✓ Health report cron (every 5 min)
+
+⏰ Setting up automated maintenance...
+   ✓ Maintenance cron configured (log: /var/log/infra/daily-YYYYMM.log)
+   ✓ Weekly verify-config cron (Sunday 06:00)
+   ✓ Monthly Cloudflare IP refresh cron (1st of month 02:30 — auto-updates firewall if IPs change)
+
+📁 Creating apps, backup, and secrets directories...
+
+📦 Deploy your apps
+   Three sources — Code: GitHub | Secrets: Bitwarden | Data: R2
+   If ADD_APPS is set in bootstrap.env, each app is deployed from Bitwarden '<AppName> Env' without prompts.
+
+   Add an app now? [y/N]: N
+   All apps added. Re-run deploy-with-setup.sh anytime to add more.
+
+💾 Configure scheduled backup (data only — R2 offsite)...
+   Backs up: Uptime Kuma data + app data/ directories.
+   NOT backed up: secrets (Bitwarden), code (GitHub), infra config (repo).
+╔════════════════════════════════════════════╗
+║   Backup configuration                     ║
+╚════════════════════════════════════════════╝
+
+   INSTALL_DIR=/opt/infra
+   BACKUP_DIR=/opt/backups
+   Config: /opt/infra/var/backup-paths.conf
+
+📂 Paths to back up (DATA only)
+   Secrets → Bitwarden | Code → GitHub | Data → here (R2)
+
+   Included by default (if present):
+     ✓ /opt/infra/var
+   NOT included: /opt/secrets (Bitwarden)
+
+   Skipping extra path entry (non-interactive or no TTY).
+   Retention: 7 days
+   Backup run time: 02:00
+   ✓ Wrote /opt/infra/var/backup-paths.conf (1 unique path(s))
+   ✓ /opt/secrets/r2.env already exists (fetched from Bitwarden). Using it.
+   ✓ rclone dependency ensured (installed via foundation.sh)
+   ✓ Cron updated (backup at 02:00 daily; log: /var/log/infra/backup-YYYYMM.log)
+
+✅ Backup configuration complete.
+   Config: /opt/infra/var/backup-paths.conf
+   Test run: INSTALL_DIR=/opt/infra BACKUP_DIR=/opt/backups LOG_DIR=/var/log/infra /opt/infra/scripts/backup/backup.sh
+
+
+╔════════════════════════════════════════════╗
+║          Bootstrap Complete! 🎉           ║
+╚════════════════════════════════════════════╝
+
+📋 Server: LE-PROD-VPS (2a02:4780:12:512d::1)
+   Infra: /opt/infra | Apps: /opt/apps | Backups: /opt/backups | Logs: /var/log/infra
+
+📝 Next steps:
+
+1️⃣  Configure Cloudflare DNS (A records @ and * → 2a02:4780:12:512d::1, Proxied); SSL Full (strict).
+
+2️⃣  Access via Tailscale: tailscale ssh deploy@LE-PROD-VPS
+
+3️⃣  Deploy apps: See /opt/infra/docs/OPERATIONS.md § App lifecycle
+
+4️⃣  Private app repos: Add deploy's SSH key to a GitHub bot; see /opt/infra/docs/OPERATIONS.md § GitHub deploy key
+
+5️⃣  Monitoring: https://monitor.loansemporium.com (Uptime Kuma + health at /status). See docs/OPERATIONS.md §5
+
+6️⃣  Backup: If skipped above, run sudo /opt/infra/scripts/backup/backup-config.sh. After deploying apps, re-run it to add app data paths. See /opt/infra/docs/OPERATIONS.md §7.1
+
+✅ Operational control: Use the deploy user for day-to-day ops (deploy apps, git pull, logs).
+
+
+🔒 Clearing BSM Access Token from process memory...
+   ✓ Secrets cleared from environment.
+
+╔════════════════════════════════════════════╗
+║   Bootstrap Complete (Phase 1 + Phase 2)   ║
+╚════════════════════════════════════════════╝
+
+   Connect as deploy user:
+   tailscale ssh deploy@LE-PROD-VPS
+
+root@srv1260741:~#
