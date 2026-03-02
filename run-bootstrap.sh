@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # run-bootstrap.sh — Public entry point for VPS bootstrap
-# Version: 2026-03-02-V9
+# Version: 2026-03-02-V10
 #
 # Forces bash if accidentally run by sh
 if [ -z "${BASH_VERSION:-}" ]; then
@@ -10,6 +10,24 @@ fi
 set -eu
 set -o pipefail
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# ─── Helpers ───────────────────────────────────────────────────────────────
+wait_for_apt() {
+    local count=0
+    local max=12 # 2 minutes (10s * 12)
+    echo -n "⏳ Waiting for apt lock..."
+    while fuser /var/lib/dpkg/lock >/dev/null 2>&1 || fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+        echo -n "."
+        sleep 10
+        count=$((count + 1))
+        if [ $count -ge $max ]; then
+            echo ""
+            echo "⚠️  Apt lock still held after 2 minutes. Attempting to proceed anyway..."
+            break
+        fi
+    done
+    echo " done."
+}
 
 SECRETS_DIR="${SECRETS_DIR:-/opt/secrets}"
 BW_ENV="$SECRETS_DIR/bw.env"
@@ -77,6 +95,7 @@ echo "   ✓ BSM token stored → $BSM_TOKEN_FILE"
 echo ""
 
 # ─── Dependencies ───────────────────────────────────────────────────────────
+wait_for_apt
 echo "📦 Ensuring system dependencies (git, curl, unzip, jq)..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
