@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # run-bootstrap.sh — Public entry point for VPS bootstrap
-# Version: 2026-03-02-V18
+# Version: 2026-03-02-V22
 #
 # Forces bash if accidentally run by sh
 if [ -z "${BASH_VERSION:-}" ]; then
@@ -14,7 +14,7 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 # ─── Helpers ───────────────────────────────────────────────────────────────
 wait_for_apt() {
     local count=0
-    local max=12 # 2 minutes (10s * 12)
+    local max=60 # 10 minutes (10s * 60)
     echo -n "⏳ Waiting for apt lock..."
     while fuser /var/lib/dpkg/lock >/dev/null 2>&1 || fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
         echo -n "."
@@ -22,7 +22,7 @@ wait_for_apt() {
         count=$((count + 1))
         if [ $count -ge $max ]; then
             echo ""
-            echo "⚠️  Apt lock still held after 2 minutes. Attempting to proceed anyway..."
+            echo "⚠️  Apt lock still held after 10 minutes. Attempting to proceed anyway..."
             break
         fi
     done
