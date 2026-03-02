@@ -94,7 +94,7 @@ echo ""
 if ! command -v bws &>/dev/null; then
     echo "📦 Installing bws CLI..."
     _bws_url=$(curl -s "https://api.github.com/repos/bitwarden/sdk-sm/releases" \
-        | grep -oP '"browser_download_url": "\K(.*bws-x86_64-unknown-linux-gnu.zip)(?=")' | head -1 2>/dev/null) || true
+        | grep -oP '"browser_download_url": "\K(.*bws-x86_64-unknown-linux-gnu.*\.zip)(?=")' | head -1 2>/dev/null) || true
     if [ -n "$_bws_url" ]; then
         curl -sL "$_bws_url" -o /tmp/bws.zip
         unzip -o -q /tmp/bws.zip bws -d /usr/local/bin/ 2>/dev/null || true
