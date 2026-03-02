@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # run-bootstrap.sh — Public entry point for VPS bootstrap
-# Version: 2026-03-02-V14
+# Version: 2026-03-02-V16
 #
 # Forces bash if accidentally run by sh
 if [ -z "${BASH_VERSION:-}" ]; then
