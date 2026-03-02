@@ -114,21 +114,31 @@ if ! command -v bws &>/dev/null; then
 fi
 _bsm_token=$(tr -d '[:space:]' < "$BSM_TOKEN_FILE" 2>/dev/null)
 
+# Automatic Discovery: If IDs are missing, find them by name
+echo "🔍 Discovering secret IDs from Bitwarden..."
+_secrets_json=$(BWS_ACCESS_TOKEN="$_bsm_token" bws secret list --output json 2>/dev/null) || true
+if [ -n "$_secrets_json" ]; then
+    find_id() { echo "$_secrets_json" | jq -r ".[] | select(.key == \"$1\") | .id" 2>/dev/null | head -1; }
+    [ -z "${BSM_ID_GITHUB_PAT:-}" ] || [ "${BSM_ID_GITHUB_PAT}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_GITHUB_PAT=$(find_id "GITHUB_PAT")
+    [ -z "${BSM_ID_BOOTSTRAP_ENV:-}" ] || [ "${BSM_ID_BOOTSTRAP_ENV}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_BOOTSTRAP_ENV=$(find_id "BOOTSTRAP_ENV")
+fi
+
 GITHUB_TOKEN=""
 if [ -n "${BSM_ID_GITHUB_PAT:-}" ] && [ "${BSM_ID_GITHUB_PAT}" != "00000000-0000-0000-0000-000000000000" ]; then
     GITHUB_TOKEN=$(BWS_ACCESS_TOKEN="$_bsm_token" bws secret get "$BSM_ID_GITHUB_PAT" --output json 2>/dev/null \
-        | python3 -c "import sys,json; print(json.load(sys.stdin).get('value',''), end='')" 2>/dev/null) || true
+        | jq -r ".value" 2>/dev/null) || true
 fi
 if [ -z "$GITHUB_TOKEN" ]; then
-    echo "❌ GitHub PAT not found in BSM (BSM_ID_GITHUB_PAT)."
-    echo "   Ensure bsm-ids.conf has BSM_ID_GITHUB_PAT set and the secret exists in BSM."
+    echo "❌ GitHub PAT not found in BSM."
+    echo "   Ensure a secret named 'GITHUB_PAT' exists in your BSM Project."
     exit 1
 fi
 
 GITHUB_ORG="${GITHUB_ORG:-}"
-if [ -z "$GITHUB_ORG" ] && [ -n "${BSM_ID_BOOTSTRAP_ENV:-}" ] && [ "${BSM_ID_BOOTSTRAP_ENV}" != "00000000-0000-0000-0000-000000000000" ]; then
+_notes=""
+if [ -n "${BSM_ID_BOOTSTRAP_ENV:-}" ] && [ "${BSM_ID_BOOTSTRAP_ENV}" != "00000000-0000-0000-0000-000000000000" ]; then
     _notes=$(BWS_ACCESS_TOKEN="$_bsm_token" bws secret get "$BSM_ID_BOOTSTRAP_ENV" --output json 2>/dev/null \
-        | python3 -c "import sys,json; print(json.load(sys.stdin).get('value',''), end='')" 2>/dev/null) || true
+        | jq -r ".value" 2>/dev/null) || true
     if [ -n "${_notes:-}" ]; then
         _line=$(echo "$_notes" | grep -E '^[[:space:]]*GITHUB_ORG=' | head -1)
         [ -n "$_line" ] && GITHUB_ORG="${_line#*=}" && GITHUB_ORG=$(echo "$GITHUB_ORG" | sed "s/^['\"]//;s/['\"]$//" | tr -d "'\"" | xargs)

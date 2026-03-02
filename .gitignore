@@ -1,0 +1,3 @@
+bitwarden_export_*.json
+*.env
+.DS_Store
