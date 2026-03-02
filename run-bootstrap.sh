@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # run-bootstrap.sh — Public entry point for VPS bootstrap
-# Version: 2026-03-02-V11
+# Version: 2026-03-02-V12
 #
 # Forces bash if accidentally run by sh
 if [ -z "${BASH_VERSION:-}" ]; then
@@ -262,7 +262,7 @@ if [ -d "$INSTALL_DIR/.git" ]; then
     cd "$INSTALL_DIR"
     git remote set-url origin "https://github.com/${GITHUB_ORG}/${GITHUB_REPO_NAME}.git"
     # Use credential helper for pull so PAT is not in argv
-    printf '%s\n' "$GITHUB_TOKEN" > "$_cred_token"
+    printf '%s\n' "$GITHUB_PAT" > "$_cred_token"
     chmod 600 "$_cred_token"
     printf '#!/bin/sh\ncase "$1" in *[Pp]assword*) cat "%s" ;; *) echo "git" ;; esac\n' "$_cred_token" > "$_cred_script"
     chmod 700 "$_cred_script"
@@ -276,7 +276,7 @@ if [ -d "$INSTALL_DIR/.git" ]; then
 else
     echo "📦 Cloning private infra-core to $INSTALL_DIR..."
     mkdir -p "$INSTALL_DIR"
-    printf '%s\n' "$GITHUB_TOKEN" > "$_cred_token"
+    printf '%s\n' "$GITHUB_PAT" > "$_cred_token"
     chmod 600 "$_cred_token"
     printf '#!/bin/sh\ncase "$1" in *[Pp]assword*) cat "%s" ;; *) echo "git" ;; esac\n' "$_cred_token" > "$_cred_script"
     chmod 700 "$_cred_script"
