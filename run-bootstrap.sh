@@ -1,5 +1,6 @@
+#!/bin/bash
 # run-bootstrap.sh — Public entry point for VPS bootstrap
-# Version: 2026-03-02-V3
+# Version: 2026-03-02-V4
 #
 # This script lives in the PUBLIC repo "vps-bootstrap". It asks for Bitwarden
 # access temporarily, fetches bootstrap credentials and stores them, runs Phase 1,
