@@ -1,3 +1,4 @@
+root@srv1260741:~#
 root@srv1260741:~# curl -sSL https://raw.githubusercontent.com/prabhakarjee/vps-bootstrap/master/run-bootstrap.sh -o run-bootstrap.sh
 chmod +x run-bootstrap.sh
 sudo ./run-bootstrap.sh
@@ -31,12 +32,12 @@ sudo ./run-bootstrap.sh
    ✓ Deploy user created (Docker group added in Phase 1)
 📦 Cloning private infra-core to /opt/infra...
 Cloning into '/opt/infra'...
-remote: Enumerating objects: 1639, done.
-remote: Counting objects: 100% (62/62), done.
-remote: Compressing objects: 100% (46/46), done.
-remote: Total 1639 (delta 28), reused 37 (delta 13), pack-reused 1577 (from 1)
-Receiving objects: 100% (1639/1639), 702.73 KiB | 3.60 MiB/s, done.
-Resolving deltas: 100% (1050/1050), done.
+remote: Enumerating objects: 1648, done.
+remote: Counting objects: 100% (71/71), done.
+remote: Compressing objects: 100% (51/51), done.
+remote: Total 1648 (delta 35), reused 43 (delta 17), pack-reused 1577 (from 1)
+Receiving objects: 100% (1648/1648), 703.88 KiB | 4.32 MiB/s, done.
+Resolving deltas: 100% (1057/1057), done.
    ✓ Clone done (PAT via helper, not in process list); token file removed
    ✓ infra-core ready at /opt/infra (owned by deploy; sudo-safe)
    ✓ BSM ID mapping auto-populated → /opt/infra/var/bsm-ids.conf
@@ -59,8 +60,8 @@ Infra-Core Version: 1.3.0
 📦 Updating system packages...
 ⏳ Waiting for apt lock... done.
 Hit:1 https://repository.monarx.com/repository/ubuntu-noble noble InRelease
-Hit:2 http://archive.ubuntu.com/ubuntu noble InRelease
-Hit:3 http://security.ubuntu.com/ubuntu noble-security InRelease
+Hit:2 http://security.ubuntu.com/ubuntu noble-security InRelease
+Hit:3 http://archive.ubuntu.com/ubuntu noble InRelease
 Hit:4 http://archive.ubuntu.com/ubuntu noble-updates InRelease
 Hit:5 http://archive.ubuntu.com/ubuntu noble-backports InRelease
 Reading package lists... Done
@@ -106,7 +107,7 @@ Get:19 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-tools-6.8
 Get:20 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 linux-tools-6.8.0-101-generic amd64 6.8.0-101.101 [1818 B]
 Get:21 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 software-properties-common all 0.99.49.4 [14.4 kB]
 Get:22 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 python3-software-properties all 0.99.49.4 [30.0 kB]
-Fetched 83.7 MB in 14s (5913 kB/s)
+Fetched 83.7 MB in 11s (7443 kB/s)
 (Reading database ... 106563 files and directories currently installed.)
 Preparing to unpack .../gcc-14-base_14.2.0-4ubuntu2~24.04.1_amd64.deb ...
 Unpacking gcc-14-base:amd64 (14.2.0-4ubuntu2~24.04.1) over (14.2.0-4ubuntu2~24.04) ...
@@ -232,7 +233,7 @@ Service restarts being deferred:
 No containers need to be restarted.
 
 User sessions running outdated binaries:
- root @ session #1: apt[4120], bash[3783]
+ root @ session #2: apt[4150], bash[3813]
 
 No VM guests are running outdated hypervisor (qemu) binaries on this host.
 📦 Installing essential packages...
@@ -267,7 +268,7 @@ After this operation, 62.8 MB of additional disk space will be used.
 Get:1 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 apt-transport-https all 2.8.3 [3970 B]
 Get:2 http://archive.ubuntu.com/ubuntu noble/universe amd64 ncdu amd64 1.19-0.1 [50.7 kB]
 Get:3 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 rclone amd64 1.60.1+dfsg-3ubuntu0.24.04.4 [16.5 MB]
-Fetched 16.5 MB in 4s (3888 kB/s)
+Fetched 16.5 MB in 4s (3783 kB/s)
 Selecting previously unselected package apt-transport-https.
 (Reading database ... 138178 files and directories currently installed.)
 Preparing to unpack .../apt-transport-https_2.8.3_all.deb ...
@@ -310,11 +311,11 @@ No VM guests are running outdated hypervisor (qemu) binaries on this host.
 Get:1 https://download.docker.com/linux/ubuntu noble InRelease [48.5 kB]
 Get:2 https://download.docker.com/linux/ubuntu noble/stable amd64 Packages [46.1 kB]
 Hit:3 https://repository.monarx.com/repository/ubuntu-noble noble InRelease
-Hit:4 http://archive.ubuntu.com/ubuntu noble InRelease
-Hit:5 http://security.ubuntu.com/ubuntu noble-security InRelease
+Hit:4 http://security.ubuntu.com/ubuntu noble-security InRelease
+Hit:5 http://archive.ubuntu.com/ubuntu noble InRelease
 Hit:6 http://archive.ubuntu.com/ubuntu noble-updates InRelease
 Hit:7 http://archive.ubuntu.com/ubuntu noble-backports InRelease
-Fetched 94.6 kB in 1s (67.4 kB/s)
+Fetched 94.6 kB in 2s (62.7 kB/s)
 Reading package lists... Done
 Building dependency tree... Done
 Reading state information... Done
@@ -340,12 +341,12 @@ Get:1 https://download.docker.com/linux/ubuntu noble/stable amd64 containerd.io 
 Get:2 https://download.docker.com/linux/ubuntu noble/stable amd64 docker-ce-cli amd64 5:29.2.1-1~ubuntu.24.04~noble [16.3 MB]
 Get:3 https://download.docker.com/linux/ubuntu noble/stable amd64 docker-ce amd64 5:29.2.1-1~ubuntu.24.04~noble [22.5 MB]
 Get:4 https://download.docker.com/linux/ubuntu noble/stable amd64 docker-buildx-plugin amd64 0.31.1-1~ubuntu.24.04~noble [20.3 MB]
-Get:5 http://archive.ubuntu.com/ubuntu noble/universe amd64 pigz amd64 2.8-1 [65.6 kB]
-Get:6 https://download.docker.com/linux/ubuntu noble/stable amd64 docker-ce-rootless-extras amd64 5:29.2.1-1~ubuntu.24.04~noble [6387 kB]
-Get:7 https://download.docker.com/linux/ubuntu noble/stable amd64 docker-compose-plugin amd64 5.1.0-1~ubuntu.24.04~noble [7847 kB]
+Get:5 https://download.docker.com/linux/ubuntu noble/stable amd64 docker-ce-rootless-extras amd64 5:29.2.1-1~ubuntu.24.04~noble [6387 kB]
+Get:6 https://download.docker.com/linux/ubuntu noble/stable amd64 docker-compose-plugin amd64 5.1.0-1~ubuntu.24.04~noble [7847 kB]
+Get:7 http://archive.ubuntu.com/ubuntu noble/universe amd64 pigz amd64 2.8-1 [65.6 kB]
 Get:8 http://archive.ubuntu.com/ubuntu noble/main amd64 libslirp0 amd64 4.7.0-1ubuntu3 [63.8 kB]
 Get:9 http://archive.ubuntu.com/ubuntu noble/universe amd64 slirp4netns amd64 1.2.1-1build2 [34.9 kB]
-Fetched 96.8 MB in 2s (49.9 MB/s)
+Fetched 96.8 MB in 3s (38.4 MB/s)
 Selecting previously unselected package containerd.io.
 (Reading database ... 138198 files and directories currently installed.)
 Preparing to unpack .../0-containerd.io_2.2.1-1~ubuntu.24.04~noble_amd64.deb ...
@@ -417,7 +418,7 @@ Executing: /usr/lib/systemd/systemd-sysv-install enable docker
 ✅ Docker installed and running
 ✅ Deploy user already exists
 🔐 Installing Bitwarden CLI (bw)...
-2026-03-02T10:09:52Z INFO Waiting for automatic snapd restart...
+2026-03-02T11:02:33Z INFO Waiting for automatic snapd restart...
 bw 2026.1.0 from 8bit Solutions LLC (bitwarden✓) installed
    ✓ bw installed via snap
 🔐 Installing Bitwarden Secrets Manager CLI (bws)...
@@ -428,7 +429,7 @@ bw 2026.1.0 from 8bit Solutions LLC (bitwarden✓) installed
    ✓ Scoped sudoers configured (deploy cannot run arbitrary root — see docs/OPERATIONS.md)
    Copied SSH keys from root (optional fallback)
 🌐 Creating Docker network for apps...
-2fb4b783062a9027cc2295ba81a55c23307fed07cb4a44651076cfec6b2cc32d
+7525b7b8fca184d49f923ae23ad896922318b947796c893da3d676e37c1776e9
 🔒 Enabling automatic security updates...
 Synchronizing state of unattended-upgrades.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
 Executing: /usr/lib/systemd/systemd-sysv-install enable unattended-upgrades
@@ -455,11 +456,11 @@ Executing: /usr/lib/systemd/systemd-sysv-install enable unattended-upgrades
 
 
 📦 Installing Tailscale...
-⏳ Waiting for apt lock... done.
+⏳ Waiting for apt lock.... done.
 Installing Tailscale for ubuntu noble, using method apt
 + mkdir -p --mode=0755 /usr/share/keyrings
-+ curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg
 + tee /usr/share/keyrings/tailscale-archive-keyring.gpg
++ curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg
 + chmod 0644 /usr/share/keyrings/tailscale-archive-keyring.gpg
 + curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list
 + tee /etc/apt/sources.list.d/tailscale.list
@@ -476,17 +477,13 @@ Hit:6 http://archive.ubuntu.com/ubuntu noble-backports InRelease
 Get:7 https://pkgs.tailscale.com/stable/ubuntu noble InRelease
 Get:8 https://pkgs.tailscale.com/stable/ubuntu noble/main all Packages [354 B]
 Get:9 https://pkgs.tailscale.com/stable/ubuntu noble/main amd64 Packages [14.6 kB]
-Fetched 21.5 kB in 2s (11.0 kB/s)
+Fetched 21.5 kB in 2s (10.6 kB/s)
 Reading package lists... Done
 + [ -n  ]
 + apt-get install -y tailscale tailscale-archive-keyring
 Reading package lists... Done
 Building dependency tree... Done
 Reading state information... Done
-The following packages were automatically installed and are no longer required:
-  linux-headers-6.8.0-94 linux-headers-6.8.0-94-generic linux-image-6.8.0-94-generic linux-modules-6.8.0-94-generic
-  linux-tools-6.8.0-94 linux-tools-6.8.0-94-generic
-Use 'sudo apt autoremove' to remove them.
 The following NEW packages will be installed:
   tailscale tailscale-archive-keyring
 0 upgraded, 2 newly installed, 0 to remove and 1 not upgraded.
@@ -494,9 +491,9 @@ Need to get 35.5 MB of archives.
 After this operation, 69.9 MB of additional disk space will be used.
 Get:1 https://pkgs.tailscale.com/stable/ubuntu noble/main amd64 tailscale amd64 1.94.2 [35.5 MB]
 Get:2 https://pkgs.tailscale.com/stable/ubuntu noble/main all tailscale-archive-keyring all 1.35.181 [3082 B]
-Fetched 35.5 MB in 2s (19.5 MB/s)
+Fetched 35.5 MB in 2s (18.5 MB/s)
 Selecting previously unselected package tailscale.
-(Reading database ... 138447 files and directories currently installed.)
+(Reading database ... 106851 files and directories currently installed.)
 Preparing to unpack .../tailscale_1.94.2_amd64.deb ...
 Unpacking tailscale (1.94.2) ...
 Selecting previously unselected package tailscale-archive-keyring.
@@ -544,13 +541,13 @@ tailscale up
    ⚠️  Tailscale SSH not detected as enabled, attempting to enable...
 
 📊 Tailscale Information:
-   Tailscale IP: 100.116.230.70
+   Tailscale IP: 100.74.103.66
    Hostname: LE-PROD-VPS
 
 🔐 Deploy SSH access (use this after Phase 1 exits):
    tailscale ssh deploy@LE-PROD-VPS
    or
-   tailscale ssh deploy@100.116.230.70
+   tailscale ssh deploy@100.74.103.66
 
 ⚠️  Public SSH (port 22) will be blocked by firewall.
    Use Tailscale SSH only after setup is complete.
@@ -615,12 +612,12 @@ tailscale up
 🔥 Configuring UFW firewall (inbound + outbound)...
    Fetching Cloudflare IP ranges...
    Resetting to defaults...
-Backing up 'user.rules' to '/etc/ufw/user.rules.20260302_154042'
-Backing up 'before.rules' to '/etc/ufw/before.rules.20260302_154042'
-Backing up 'after.rules' to '/etc/ufw/after.rules.20260302_154042'
-Backing up 'user6.rules' to '/etc/ufw/user6.rules.20260302_154042'
-Backing up 'before6.rules' to '/etc/ufw/before6.rules.20260302_154042'
-Backing up 'after6.rules' to '/etc/ufw/after6.rules.20260302_154042'
+Backing up 'user.rules' to '/etc/ufw/user.rules.20260302_163344'
+Backing up 'before.rules' to '/etc/ufw/before.rules.20260302_163344'
+Backing up 'after.rules' to '/etc/ufw/after.rules.20260302_163344'
+Backing up 'user6.rules' to '/etc/ufw/user6.rules.20260302_163344'
+Backing up 'before6.rules' to '/etc/ufw/before6.rules.20260302_163344'
+Backing up 'after6.rules' to '/etc/ufw/after6.rules.20260302_163344'
 
 Default incoming policy changed to 'deny'
 (be sure to update your rules accordingly)
@@ -925,14 +922,7 @@ Infra-Core Version: 1.3.0
 
 ━━ Shared Postgres Credentials ━━━━━━━━━━━━━━━━━━━━━━━
   ✓ Postgres credentials → /opt/secrets/postgres.env
-
-━━ Application Secrets (Auto-Discovery) ━━━━━━━━━━━━━━
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  ✅ All secrets fetched (8 sections) — zero prompts
-
-   ✓ Infrastructure secrets synchronized (zero prompts).
+/opt/infra/scripts/setup/fetch-secrets.sh: line 267: syntax error near unexpected token `else'
 🛠️  Choose Phase 2 mode:
    [1] Fresh Baseline (Clean install, no apps, no data restore)
    [2] Full Recovery  (Restore apps and data from Cloudflare R2)
@@ -952,20 +942,25 @@ Infra-Core Version: 1.3.0
 🚀 Caddy reverse proxy...
 WARN[0000] /opt/infra/caddy/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
 [+] up 11/11
- ✔ Image caddy:2-alpine      Pulled                                                                                              6.8s
+ ✔ Image caddy:2-alpine      Pulled                                                                                              6.5s
  ✔ Volume caddy_caddy_data   Created                                                                                             0.0s
  ✔ Volume caddy_caddy_config Created                                                                                             0.0s
  ✔ Container caddy           Started                                                                                             0.4s
    ✓ Caddy started
 
 🐘 Starting shared Postgres service...
-5f1baab1a1f2b683f0ec75675a4ae3f96cc5a4d6e5ed9aac97040e97e8759535
-env: ‘compose’: No such file or directory
-   ⚠️  Postgres failed to start
+d6cb045858df9c3cd83d8358f9739afbc5b1c8c5786ecf0d75d24fd1da1fa2aa
+WARN[0000] /opt/infra/infra-services/postgres/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+[+] up 15/15
+ ✔ Image postgres:16-alpine      Pulled                                                                                          9.2s
+ ✔ Network postgres_infra-db-net Created                                                                                         0.0s
+ ✔ Container infra-postgres      Started                                                                                         0.5s
+   Waiting 10s for Postgres to initialize...
+   ✓ Shared Postgres started (reachable via infra-db-net)
 
 📊 Starting Uptime Kuma monitoring...
 [+] up 17/17
- ✔ Image louislam/uptime-kuma:1        Pulled                                                                                   14.9s
+ ✔ Image louislam/uptime-kuma:1        Pulled                                                                                   14.0s
  ✔ Volume uptime-kuma_uptime-kuma-data Created                                                                                  0.0s
  ✔ Container uptime-kuma               Started                                                                                  1.1s
    ✓ Uptime Kuma started (caddy-net only)
@@ -977,7 +972,7 @@ App Name: uptime-kuma
 Domain:   monitor.loansemporium.com
 Port:     3001
 
-💾 Caddyfile backed up to /opt/infra/caddy/Caddyfile.bak.20260302_154149
+💾 Caddyfile backed up to /opt/infra/caddy/Caddyfile.bak.20260302_163525
 📝 Adding to Caddyfile...
 🔍 Validating Caddyfile...
 ✓ Caddy restarted
@@ -1016,11 +1011,11 @@ Port:     3001
 Unable to find image 'python:3-slim' locally
 3-slim: Pulling from library/python
 31ba6e9b229c: Pull complete
-206356c42440: Pull complete
 f20ee1ada948: Pull complete
+206356c42440: Pull complete
 dc0c4d99783e: Pull complete
-1a3f3c3f189b: Download complete
 29b54cc62b29: Download complete
+1a3f3c3f189b: Download complete
 Digest: sha256:6a27522252aef8432841f224d9baaa6e9fce07b07584154fa0b9a96603af7456
 Status: Downloaded newer image for python:3-slim
   ✓ Admin account created: admin
@@ -1035,7 +1030,7 @@ Status: Downloaded newer image for python:3-slim
   Notification IDs created: 1, 2
   Pass to add-monitor with: --notify-ids 1,2
    ✓ Notification channels configured
-   ✓ Standard monitors created (VPS Ping via Tailscale: 100.116.230.70)
+   ✓ Standard monitors created (VPS Ping via Tailscale: 100.74.103.66)
   ✓ Connected to Kuma at http://uptime-kuma:3001 (attempt 1)
   ℹ  Auto-linked 2 default notification(s)
   Adding: INFRA - Dashboard ...
@@ -1048,13 +1043,13 @@ Status: Downloaded newer image for python:3-slim
   ✓ INFRA - Caddy SSL (id=4)
   Adding: INFRA - Backup Heartbeat ...
   ✓ INFRA - Backup Heartbeat (id=5)
-    ℹ  __EXTRACT_PUSH_BACKUP__=https://push.loansemporium.com/api/push/VRaaPYLGmc?status=up&msg=OK&ping=
+    ℹ  __EXTRACT_PUSH_BACKUP__=https://push.loansemporium.com/api/push/1cUVED85PO?status=up&msg=OK&ping=
   Adding: INFRA - Docker Daemon ...
   ✓ INFRA - Docker Daemon (id=6)
-    ℹ  __EXTRACT_PUSH_DOCKER__=https://push.loansemporium.com/api/push/GhaG0aCjwi?status=up&msg=OK&ping=
+    ℹ  __EXTRACT_PUSH_DOCKER__=https://push.loansemporium.com/api/push/89KNzGgIrv?status=up&msg=OK&ping=
   Adding: INFRA - Access Rotation ...
   ✓ INFRA - Access Rotation (id=7)
-    ℹ  __EXTRACT_PUSH_ROTATION__=https://push.loansemporium.com/api/push/m5YNh5tsTY?status=up&msg=OK&ping=
+    ℹ  __EXTRACT_PUSH_ROTATION__=https://push.loansemporium.com/api/push/PTvgQFGvVX?status=up&msg=OK&ping=
   ✓ Connected to Kuma at http://uptime-kuma:3001 (attempt 1)
 🔄 Syncing default notifications to all monitors...
   ✓ Synced notifications for 0 monitor(s)
