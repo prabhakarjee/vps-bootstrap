@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # run-bootstrap.sh — Public entry point for VPS bootstrap
-# Version: 2026-03-02-V7
+# Version: 2026-03-02-V8
 #
 # Forces bash if accidentally run by sh
 if [ -z "${BASH_VERSION:-}" ]; then
@@ -122,6 +122,7 @@ if [ -n "$_secrets_json" ]; then
     [ -z "${BSM_ID_GITHUB_PAT:-}" ] || [ "${BSM_ID_GITHUB_PAT}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_GITHUB_PAT=$(find_id "GITHUB_PAT")
     [ -z "${BSM_ID_BOOTSTRAP_ENV:-}" ] || [ "${BSM_ID_BOOTSTRAP_ENV}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_BOOTSTRAP_ENV=$(find_id "BOOTSTRAP_ENV")
     [ -z "${BSM_ID_DEPLOY_PASSWORD:-}" ] || [ "${BSM_ID_DEPLOY_PASSWORD}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_DEPLOY_PASSWORD=$(find_id "DEPLOY_PASSWORD")
+    [ -z "${BSM_ID_TAILSCALE_KEY:-}" ] || [ "${BSM_ID_TAILSCALE_KEY}" = "00000000-0000-0000-0000-000000000000" ] && BSM_ID_TAILSCALE_KEY=$(find_id "TAILSCALE_KEY")
 fi
 
 GITHUB_TOKEN=""
@@ -153,7 +154,7 @@ echo "   ✓ GitHub org: $GITHUB_ORG"
 
 # Store allowed bootstrap config keys
 BOOTSTRAP_ENV="$SECRETS_DIR/bootstrap.env"
-BOOTSTRAP_ALLOWED_KEYS="GITHUB_ORG GITHUB_REPO_NAME DEPLOY_USER_PASSWORD VPS_HOSTNAME PRIMARY_DOMAIN MONITOR_SUBDOMAIN TZ BACKUP_CRON_TIME MAINT_CRON_TIME FETCH_SECRETS PHASE2_MODE PROVISION_KUMA RUN_BACKUP_CONFIG ADD_APPS DEPLOY_APPS"
+BOOTSTRAP_ALLOWED_KEYS="GITHUB_ORG GITHUB_REPO_NAME DEPLOY_USER_PASSWORD TAILSCALE_KEY VPS_HOSTNAME PRIMARY_DOMAIN MONITOR_SUBDOMAIN TZ BACKUP_CRON_TIME MAINT_CRON_TIME FETCH_SECRETS PHASE2_MODE PROVISION_KUMA RUN_BACKUP_CONFIG ADD_APPS DEPLOY_APPS"
 if [ -n "${_notes:-}" ] && echo "$_notes" | grep -q "="; then
     : > "$BOOTSTRAP_ENV"
     while IFS= read -r _line; do
@@ -192,6 +193,20 @@ if [ -n "${BSM_ID_DEPLOY_PASSWORD:-}" ] && [ "${BSM_ID_DEPLOY_PASSWORD}" != "000
         _pass_escaped=$(printf '%s' "$_deploy_pass" | sed "s/'/'\\''/g")
         printf "DEPLOY_USER_PASSWORD='%s'\n" "$_pass_escaped" >> "$BOOTSTRAP_ENV"
         echo "   ✓ Deploy password fetched from BSM and added to config."
+    fi
+fi
+
+# Inject TAILSCALE_KEY from separate secret if found
+if [ -n "${BSM_ID_TAILSCALE_KEY:-}" ] && [ "${BSM_ID_TAILSCALE_KEY}" != "00000000-0000-0000-0000-000000000000" ]; then
+    _ts_key=$(BWS_ACCESS_TOKEN="$_bsm_token" bws secret get "$BSM_ID_TAILSCALE_KEY" --output json 2>/dev/null \
+        | jq -r ".value" 2>/dev/null) || true
+    if [ -n "$_ts_key" ]; then
+        if [ -f "$BOOTSTRAP_ENV" ]; then
+            sed -i '/^TAILSCALE_KEY=/d' "$BOOTSTRAP_ENV"
+        fi
+        _ts_escaped=$(printf '%s' "$_ts_key" | sed "s/'/'\\''/g")
+        printf "TAILSCALE_KEY='%s'\n" "$_ts_escaped" >> "$BOOTSTRAP_ENV"
+        echo "   ✓ Tailscale key fetched from BSM and added to config."
     fi
 fi
 chmod 640 "$BOOTSTRAP_ENV"
