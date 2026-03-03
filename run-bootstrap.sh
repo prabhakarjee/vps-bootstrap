@@ -197,8 +197,83 @@ if [ -n "$_secrets_json" ] && [ "$_secrets_json" != "[]" ]; then
     BSM_ID_PG_PASS=$(find_id "PG_PASS")
     BSM_ID_BACKUP_KEY=$(find_id "BACKUP_KEY")
 else
-    echo "   ⚠️  No secrets found in BSM or 'bws secret list' returned empty."
-    echo "      Check your BSM Access Token permissions or Project membership."
+    echo "   ⚠️  Could not connect to BSM or no secrets found."
+    echo "      Attempting emergency recovery from R2 bundle (G2)..."
+    echo ""
+
+    # G2: Emergency Recovery Flow
+    if [ -t 0 ]; then
+        read -r -p "   Recover from R2 bundle? (y/N): " recover_choice
+        if [[ "${recover_choice,,}" == "y" ]]; then
+            # We need rclone and R2 config
+            apt-get install -y rclone >/dev/null 2>&1 || true
+            if ! command -v rclone &>/dev/null; then
+                echo "   ❌ rclone required for R2 recovery."
+                exit 1
+            fi
+
+            # Prompt for R2 config if not set
+            [ -z "${R2_ACCESS_KEY_ID:-}" ] && printf "   R2 Access Key ID: " && read -r R2_ACCESS_KEY_ID
+            [ -z "${R2_SECRET_ACCESS_KEY:-}" ] && printf "   R2 Secret Access Key: " && read -s R2_SECRET_ACCESS_KEY && echo ""
+            [ -z "${R2_ENDPOINT:-}" ] && printf "   R2 Endpoint URL: " && read -r R2_ENDPOINT
+            [ -z "${R2_BUCKET:-}" ] && printf "   R2 Bucket Name: " && read -r R2_BUCKET
+
+            if [ -n "$R2_ACCESS_KEY_ID" ] && [ -n "$R2_SECRET_ACCESS_KEY" ] && [ -n "$R2_ENDPOINT" ] && [ -n "$R2_BUCKET" ]; then
+                export RCLONE_CONFIG_R2_TYPE=s3
+                export RCLONE_CONFIG_R2_PROVIDER=Cloudflare
+                export RCLONE_CONFIG_R2_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
+                export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
+                export RCLONE_CONFIG_R2_ENDPOINT="$R2_ENDPOINT"
+                
+                echo "   🔍 Searching for latest secrets bundle in R2..."
+                LATEST_BUNDLE=$(rclone lsjson "R2:$R2_BUCKET/backups/" --include "secrets_bundle_*.tar.gz*" | jq -r 'sort_by(.Name) | last | .Name' 2>/dev/null || true)
+                
+                if [ -n "$LATEST_BUNDLE" ] && [ "$LATEST_BUNDLE" != "null" ]; then
+                    echo "   📥 Downloading $LATEST_BUNDLE..."
+                    rclone copy "R2:$R2_BUCKET/backups/$LATEST_BUNDLE" /tmp/
+                    
+                    if [[ "$LATEST_BUNDLE" == *.enc ]]; then
+                        printf "   🔐 Enter Offline Decryption Key: "
+                        read -rs offline_key; echo ""
+                        echo "$offline_key" > /tmp/recovery.key
+                        
+                        echo "   🔓 Decrypting bundle..."
+                        if openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -d -in "/tmp/$LATEST_BUNDLE" -out "/tmp/secrets_bundle.tar.gz" -pass file:/tmp/recovery.key 2>/dev/null; then
+                            mkdir -p "$SECRETS_DIR"
+                            tar -xzf "/tmp/secrets_bundle.tar.gz" -C "$SECRETS_DIR/"
+                            echo "   ✅ Secrets restored from R2 bundle."
+                            rm -f /tmp/recovery.key /tmp/secrets_bundle.tar.gz
+                        else
+                            echo "   ❌ Decryption failed. Incorrect key?"
+                            exit 1
+                        fi
+                    else
+                        mkdir -p "$SECRETS_DIR"
+                        tar -xzf "/tmp/$LATEST_BUNDLE" -C "$SECRETS_DIR/"
+                        echo "   ✅ Secrets restored from R2 (unencrypted)."
+                    fi
+                    
+                    # Source restored bootstrap.env if it exists
+                    if [ -f "$SECRETS_DIR/bootstrap.env" ]; then
+                        # shellcheck source=/dev/null
+                        . "$SECRETS_DIR/bootstrap.env"
+                    fi
+                else
+                    echo "   ❌ No secrets bundle found in R2 bucket."
+                    exit 1
+                fi
+            else
+                echo "   ❌ Missing R2 credentials. Cannot recover."
+                exit 1
+            fi
+        else
+            echo "   ❌ BSM unavailable and recovery skipped. Aborting."
+            exit 1
+        fi
+    else
+        echo "   ❌ BSM unavailable and no TTY for recovery prompts. Aborting."
+        exit 1
+    fi
 fi
 
 GITHUB_PAT=""
@@ -383,20 +458,32 @@ echo "   ✓ BSM ID mapping auto-populated → /opt/infra/var/bsm-ids.conf"
 echo ""
 
 # ─── Run Phase 1 ─────────────────────────────────────────────────────────────
-echo "🔧 Running Phase 1 (foundation, Tailscale, GitHub access, firewall)..."
-echo ""
+PHASE1_SENTINEL="$INSTALL_DIR/var/.phase1.done"
 _phase1_exit=0
-bash "$INSTALL_DIR/scripts/bootstrap-phase1.sh" || _phase1_exit=$?
+
+if [ -f "$PHASE1_SENTINEL" ]; then
+    echo "⏭️  Phase 1 already complete (sentinel found: $PHASE1_SENTINEL). Skipping..."
+else
+    echo "🔧 Running Phase 1 (foundation, Tailscale, GitHub access, firewall)..."
+    echo ""
+    bash "$INSTALL_DIR/scripts/bootstrap-phase1.sh" || _phase1_exit=$?
+fi
 
 # ─── Run Phase 2 automatically (BSM Token still active) ─────────────────────
 _phase2_exit=0
+PHASE2_SENTINEL="$INSTALL_DIR/var/.phase2.done"
+
 if [ "$_phase1_exit" -eq 0 ]; then
-    echo ""
-    echo "🔧 Running Phase 2 (Caddy, secrets, apps, cron)..."
-    echo ""
-    # Pass BSM token to Phase 2 so it doesn't re-prompt
-    export BSM_ACCESS_TOKEN="$_bsm_token"
-    bash "$INSTALL_DIR/scripts/bootstrap-phase2.sh" || _phase2_exit=$?
+    if [ -f "$PHASE2_SENTINEL" ]; then
+        echo "⏭️  Phase 2 already complete (sentinel found: $PHASE2_SENTINEL). Skipping..."
+    else
+        echo ""
+        echo "🔧 Running Phase 2 (Caddy, secrets, apps, cron)..."
+        echo ""
+        # Pass BSM token to Phase 2 so it doesn't re-prompt
+        export BSM_ACCESS_TOKEN="$_bsm_token"
+        bash "$INSTALL_DIR/scripts/bootstrap-phase2.sh" || _phase2_exit=$?
+    fi
 fi
 
 # ─── Cleanup BSM Token from memory ───────────────────────────────────────────
