@@ -34,6 +34,9 @@ BW_ENV="$SECRETS_DIR/bw.env"
 INSTALL_DIR="${INSTALL_DIR:-/opt/infra}"
 GITHUB_REPO_NAME="${GITHUB_REPO_NAME:-infra-core}"
 BRANCH="${BRANCH:-master}"
+# Pin to a specific commit or tag for stable DR rebuilds (optional; leave empty to track BRANCH).
+# Set via: sudo INFRA_CORE_COMMIT=abc123 ./run-bootstrap.sh  or  export INFRA_CORE_COMMIT=v1.2.3
+INFRA_CORE_COMMIT="${INFRA_CORE_COMMIT:-}"
 
 echo "╔════════════════════════════════════════════╗"
 echo "║  VPS Bootstrap (Bitwarden → infra-core)    ║"
@@ -415,6 +418,17 @@ else
 fi
 trap - EXIT
 cleanup_cred
+
+# ─── Optional: pin to a specific commit/tag (stable DR rebuilds) ──────────────
+if [ -n "${INFRA_CORE_COMMIT:-}" ]; then
+    echo "📌 Pinning infra-core to: $INFRA_CORE_COMMIT"
+    if git -C "$INSTALL_DIR" checkout "$INFRA_CORE_COMMIT" > /dev/null 2>&1; then
+        echo "   ✓ Checked out commit/tag: $INFRA_CORE_COMMIT"
+    else
+        echo "⚠️  Could not checkout '$INFRA_CORE_COMMIT' — falling back to branch tip ($BRANCH)."
+        echo "   Verify INFRA_CORE_COMMIT is a valid ref in the repository."
+    fi
+fi
 
 # Security hardening: keep infra repo and privileged scripts root-owned so sudo path rules
 # cannot be bypassed by editing allowed script files.
